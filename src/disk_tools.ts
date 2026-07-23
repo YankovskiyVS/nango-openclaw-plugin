@@ -4,12 +4,6 @@ import { buildToolDescription, type ProviderMeta } from "./catalog.js";
 import { type GetRuntime, type ResolvedRuntime } from "./config.js";
 import { proxyCall } from "./proxy.js";
 
-function registerOptionalTool(
-  api: OpenClawPluginApi,
-  tool: Parameters<OpenClawPluginApi["registerTool"]>[0],
-) {
-  api.registerTool(tool, { optional: true });
-}
 
 function toolResult(payload: unknown): {
   content: Array<{ type: "text"; text: string }>;
@@ -152,7 +146,7 @@ export function registerDiskTools(
 
     switch (action) {
       case "info":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: { type: "object", additionalProperties: false, properties: {} },
@@ -163,7 +157,7 @@ export function registerDiskTools(
         break;
       case "list":
       case "get":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -198,7 +192,7 @@ export function registerDiskTools(
         });
         break;
       case "files":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -223,7 +217,7 @@ export function registerDiskTools(
         });
         break;
       case "last_uploaded":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -242,7 +236,7 @@ export function registerDiskTools(
         });
         break;
       case "mkdir":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -268,7 +262,7 @@ export function registerDiskTools(
         });
         break;
       case "upload":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -306,7 +300,7 @@ export function registerDiskTools(
         });
         break;
       case "upload_link":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -337,7 +331,7 @@ export function registerDiskTools(
         });
         break;
       case "download_link":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -364,7 +358,7 @@ export function registerDiskTools(
         break;
       case "copy":
       case "move":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -398,7 +392,7 @@ export function registerDiskTools(
         });
         break;
       case "delete":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -426,7 +420,7 @@ export function registerDiskTools(
         break;
       case "publish":
       case "unpublish":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -449,7 +443,7 @@ export function registerDiskTools(
         });
         break;
       case "trash_list":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -474,7 +468,7 @@ export function registerDiskTools(
         });
         break;
       case "trash_restore":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -506,7 +500,7 @@ export function registerDiskTools(
         });
         break;
       case "trash_empty":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: { type: "object", additionalProperties: false, properties: {} },

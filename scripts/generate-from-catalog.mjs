@@ -75,7 +75,6 @@ const catalog = providers.map((p) => {
   };
 });
 
-const keys = catalog.map((p) => p.key);
 const contractTools = [
   ...catalog.flatMap((p) => p.tools.map((t) => t.name)),
   "nango_list_connections",
@@ -207,7 +206,7 @@ const manifest = {
   name: "Nango Proxy Connector",
   description:
     "Tools OpenClaw for calling 3rd-party providers via ai-assistant-nango-proxy (self-hosted Nango). Catalog: catalog/providers.yaml",
-  version: "0.4.0",
+  version: "0.5.0",
   configSchema: {
     type: "object",
     additionalProperties: false,
@@ -222,38 +221,9 @@ const manifest = {
         description: "Env var with Cloud.ru API key (default CLOUDRU_API_KEY)",
         default: "CLOUDRU_API_KEY",
       },
-      providers: {
-        type: "array",
-        description:
-          "Full catalog of providers (always present). Operator sets enabled=true + connectionId on connect; disabled entries keep enabled=false.",
-        items: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            type: { type: "string", enum: keys },
-            providerConfigKey: { type: "string" },
-            connectionId: {
-              type: "string",
-              description: "Empty string when disabled; required when enabled",
-            },
-            displayName: { type: "string" },
-            enabled: {
-              type: "boolean",
-              default: false,
-              description: "false = catalog stub; true = connected",
-            },
-          },
-          required: ["type"],
-        },
-      },
     },
   },
   contracts: { tools: contractTools },
-  toolMetadata: Object.fromEntries(
-    contractTools
-      .filter((name) => name !== "nango_list_connections")
-      .map((name) => [name, { optional: true }]),
-  ),
 };
 
 writeFileSync(

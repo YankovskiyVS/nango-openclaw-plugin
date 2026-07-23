@@ -3,12 +3,6 @@ import { buildToolDescription, type ProviderMeta } from "./catalog.js";
 import { type GetRuntime } from "./config.js";
 import { calendarCall } from "./proxy.js";
 
-function registerOptionalTool(
-  api: OpenClawPluginApi,
-  tool: Parameters<OpenClawPluginApi["registerTool"]>[0],
-) {
-  api.registerTool(tool, { optional: true });
-}
 
 function toolResult(payload: unknown): {
   content: Array<{ type: "text"; text: string }>;
@@ -54,7 +48,7 @@ export function registerCalendarTools(
 
     switch (action) {
       case "list_calendars":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: { type: "object", additionalProperties: false, properties: {} },
@@ -65,7 +59,7 @@ export function registerCalendarTools(
         });
         break;
       case "create_calendar":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -101,7 +95,7 @@ export function registerCalendarTools(
         });
         break;
       case "list_events":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -131,7 +125,7 @@ export function registerCalendarTools(
         });
         break;
       case "get_event":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -152,7 +146,7 @@ export function registerCalendarTools(
         });
         break;
       case "create_event":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -191,7 +185,7 @@ export function registerCalendarTools(
         });
         break;
       case "update_event":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {
@@ -219,7 +213,7 @@ export function registerCalendarTools(
         });
         break;
       case "delete_event":
-        registerOptionalTool(api, {
+        api.registerTool({
           name: t.name,
           description: desc,
           parameters: {

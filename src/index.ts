@@ -1,16 +1,15 @@
 /**
  * nango-openclaw-plugin — OpenClaw tools for ai-assistant-nango-proxy.
  *
- * Always registers the full catalog of tools at load time.
- * plugins.entries.nango-proxy.config.providers lists every provider with
- * enabled:false by default; connect flips enabled:true (+ connectionId).
- * Hot-reload of that config gates tools without re-registering / restart.
+ * Registers the full catalog of tools at startup (always enabled).
+ * No per-connection config: nango-proxy resolves OAuth at call time and
+ * returns 404 when the integration is not connected.
  */
 
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import {
   CATALOG,
-  CATALOG_BY_TOOL,
+  CATALOG_BY_KEY,
   LIST_CONNECTIONS_TOOL,
   buildToolDescription,
   type ProviderMeta,
@@ -18,29 +17,18 @@ import {
 import {
   type GetRuntime,
   type PluginConfig,
-  activeProviders,
-  findProvider,
-  isProviderActive,
-  providerKey,
   resolveRuntime,
 } from "./config.js";
-import { isConnectionAlive, mailCall, proxyCall } from "./proxy.js";
+import { listConnections, mailCall, proxyCall } from "./proxy.js";
 import { registerCalendarTools } from "./calendar_tools.js";
 import { registerDiskTools } from "./disk_tools.js";
 
 const PLUGIN_ID = "nango-proxy";
-const PLUGIN_VERSION = "0.4.0";
+const PLUGIN_VERSION = "0.5.0";
 
 function readPluginConfig(api: OpenClawPluginApi): PluginConfig {
   return ((api as { pluginConfig?: PluginConfig }).pluginConfig ??
     {}) as PluginConfig;
-}
-
-function registerOptionalTool(
-  api: OpenClawPluginApi,
-  tool: Parameters<OpenClawPluginApi["registerTool"]>[0],
-) {
-  api.registerTool(tool, { optional: true });
 }
 
 function callParameters(meta: ProviderMeta) {
@@ -98,7 +86,7 @@ function registerProxyTool(
   const label = meta.displayName || meta.key;
   const tool = meta.tools[0]?.name || meta.tool;
 
-  registerOptionalTool(api, {
+  api.registerTool({
     name: tool,
     description: buildToolDescription(meta, label, tool),
     parameters: callParameters(meta),
@@ -147,7 +135,7 @@ function registerMailTools(
   for (const t of meta.tools) {
     const action = t.action as "list" | "get" | "send";
     if (action === "list") {
-      registerOptionalTool(api, {
+      api.registerTool({
         name: t.name,
         description: buildToolDescription(meta, label, t.name),
         parameters: {
@@ -189,7 +177,7 @@ function registerMailTools(
         },
       });
     } else if (action === "get") {
-      registerOptionalTool(api, {
+      api.registerTool({
         name: t.name,
         description: buildToolDescription(meta, label, t.name),
         parameters: {
@@ -233,7 +221,7 @@ function registerMailTools(
         },
       });
     } else if (action === "send") {
-      registerOptionalTool(api, {
+      api.registerTool({
         name: t.name,
         description: buildToolDescription(meta, label, t.name),
         parameters: {
@@ -310,9 +298,8 @@ export default {
     const getRuntime: GetRuntime = () =>
       resolveRuntime(readPluginConfig(api));
 
-    let boot: ReturnType<typeof resolveRuntime>;
     try {
-      boot = getRuntime();
+      getRuntime();
     } catch (err) {
       api.logger.error(
         `[nango-proxy] failed to resolve runtime: ${err instanceof Error ? err.message : String(err)}`,
@@ -320,7 +307,6 @@ export default {
       return;
     }
 
-    // Full catalog always — connect only flips providers[].enabled in config.
     const registered: string[] = [];
     for (const meta of CATALOG) {
       if (meta.kind === "mail") {
@@ -337,7 +323,8 @@ export default {
     api.registerTool({
       name: LIST_CONNECTIONS_TOOL,
       description:
-        "List active 3rd-party provider connections available to this EvoClaw instance.",
+        "List currently connected 3rd-party integrations for this EvoClaw (from nango-proxy / Nango). " +
+        "Call this before using integration tools if unsure whether the user has connected a provider.",
       parameters: {
         type: "object",
         additionalProperties: false,
@@ -345,64 +332,43 @@ export default {
       },
       async execute() {
         const runtime = getRuntime();
-        const active = activeProviders(runtime.providers);
-        return toolResult(
-          active.map((p) => {
-            const key = providerKey(p);
-            const meta = CATALOG.find((m) => m.key === key);
-            return {
-              type: key,
-              connectionId: p.connectionId,
-              displayName: p.displayName || meta?.displayName || key,
-              kind: meta?.kind ?? "proxy",
-              tools: meta?.tools?.map((t) => t.name) ?? (meta ? [meta.tool] : []),
-              upstreamBase: meta?.upstreamBase,
-              examples: meta?.examples,
-              enabled: true,
-            };
-          }),
-        );
+        const res = await listConnections(runtime);
+        const body = tryParseJSON(res.bodyText) as {
+          connections?: Array<{
+            type?: string;
+            connectionId?: string;
+            status?: string;
+            enabled?: boolean;
+          }>;
+        };
+        if (res.status >= 400) {
+          return toolResult({
+            status: res.status,
+            error: "failed to list connections",
+            body,
+          });
+        }
+        const connections = (body.connections ?? []).map((c) => {
+          const key = (c.type || "").trim();
+          const meta = CATALOG_BY_KEY.get(key);
+          return {
+            type: key,
+            connectionId: c.connectionId,
+            status: c.status,
+            enabled: c.enabled !== false,
+            displayName: meta?.displayName || key,
+            kind: meta?.kind ?? "proxy",
+            tools: meta?.tools?.map((t) => t.name) ?? (meta ? [meta.tool] : []),
+            upstreamBase: meta?.upstreamBase,
+            examples: meta?.examples,
+          };
+        });
+        return toolResult({ status: res.status, connections });
       },
     });
 
-    api.on("before_tool_call", async (event: { toolName?: string; name?: string }) => {
-      const toolName = event.toolName || event.name || "";
-      if (toolName === LIST_CONNECTIONS_TOOL) {
-        return { block: false };
-      }
-      const meta = CATALOG_BY_TOOL.get(toolName);
-      if (!meta) {
-        return { block: false };
-      }
-      // Live config — hot-reload flips enabled without re-registering tools.
-      const runtime = getRuntime();
-      const p = findProvider(runtime.providers, meta.key);
-      if (!isProviderActive(p)) {
-        return {
-          block: true,
-          reason: `Connection for ${meta.key} is not enabled — connect the provider first.`,
-        };
-      }
-      const alive = await isConnectionAlive({
-        proxyBaseUrl: runtime.proxyBaseUrl,
-        projectId: runtime.projectId,
-        evoclawId: runtime.evoclawId,
-        apiKey: runtime.apiKey,
-        providerConfigKey: meta.key,
-      });
-      if (!alive) {
-        return {
-          block: true,
-          reason: `Connection for ${meta.key} is disconnected or unavailable — tool temporarily blocked.`,
-        };
-      }
-      return { block: false };
-    });
-
-    const enabledAtBoot = activeProviders(boot.providers).map(providerKey);
     api.logger.info(
-      `[nango-proxy] v${PLUGIN_VERSION} registered ${registered.length + 1} tools ` +
-        `(full catalog); enabled now: ${enabledAtBoot.join(", ") || "(none)"}`,
+      `[nango-proxy] v${PLUGIN_VERSION} registered ${registered.length + 1} tools (all enabled; connections resolved at call time)`,
     );
   },
 };

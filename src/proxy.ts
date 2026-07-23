@@ -199,7 +199,20 @@ export async function calendarCall(input: {
   return doFetch(url, method, input.apiKey, input.body, undefined, input.timeoutMs);
 }
 
-/** Liveness probe for before_tool_call gating. */
+export async function listConnections(input: {
+  proxyBaseUrl: string;
+  projectId: string;
+  evoclawId: string;
+  apiKey: string;
+  timeoutMs?: number;
+}): Promise<ProxyCallResult> {
+  const base = input.proxyBaseUrl.replace(/\/$/, "");
+  const url =
+    `${base}/api/v1/${input.projectId}/evo-claws/${input.evoclawId}/connections`;
+  return doFetch(url, "GET", input.apiKey, undefined, undefined, input.timeoutMs ?? 30_000);
+}
+
+/** Liveness probe — optional; tools themselves return 404 when connection is missing. */
 export async function isConnectionAlive(input: {
   proxyBaseUrl: string;
   projectId: string;
@@ -208,53 +221,20 @@ export async function isConnectionAlive(input: {
   providerConfigKey: string;
 }): Promise<boolean> {
   try {
-    if (input.providerConfigKey === "yandex-mail") {
-      // Do NOT probe IMAP here — AUTHENTICATIONFAILED / "IMAP disabled" would block the tool hook.
-      // Check OAuth identity via Nango HTTP proxy (login.yandex.ru/info) instead.
-      const res = await proxyCall({
-        ...input,
-        method: "GET",
-        endpoint: "info",
-        query: "format=json",
-        timeoutMs: 10_000,
-      });
-      if (res.status === 401 || res.status === 403) return false;
-      if (res.status === 404) return false;
-      return res.status < 500;
-    }
-    if (input.providerConfigKey === "yandex-disk") {
-      const res = await proxyCall({
-        ...input,
-        method: "GET",
-        endpoint: "v1/disk",
-        timeoutMs: 10_000,
-      });
-      if (res.status === 401 || res.status === 403) return false;
-      if (res.status === 404) return false;
-      return res.status < 500;
-    }
-    if (input.providerConfigKey === "yandex-calendar") {
-      const res = await calendarCall({
-        ...input,
-        action: "list_calendars",
-        timeoutMs: 15_000,
-      });
-      if (res.status === 401 || res.status === 403) return false;
-      if (res.status === 404) return false;
-      return res.status < 500;
-    }
-    const res = await proxyCall({
-      ...input,
-      method: "HEAD",
-      endpoint: "/",
-      timeoutMs: 5_000,
+    const listed = await listConnections({
+      proxyBaseUrl: input.proxyBaseUrl,
+      projectId: input.projectId,
+      evoclawId: input.evoclawId,
+      apiKey: input.apiKey,
+      timeoutMs: 10_000,
     });
-    if (res.status === 401 || res.status === 403) return false;
-    if (res.status === 404) {
-      const lower = res.bodyText.toLowerCase();
-      if (lower.includes("not found") || lower.includes("connection")) return false;
-    }
-    return res.status < 500;
+    if (listed.status >= 400) return false;
+    const body = JSON.parse(listed.bodyText) as {
+      connections?: Array<{ type?: string; enabled?: boolean }>;
+    };
+    return (body.connections ?? []).some(
+      (c) => c.type === input.providerConfigKey && c.enabled !== false,
+    );
   } catch {
     return false;
   }

@@ -49,6 +49,12 @@ test("buildUrl preserves disk upload query with path", () => {
   assert.match(url, /overwrite=true/);
 });
 
+test("listConnections URL", async () => {
+  // smoke: function is exported
+  const { listConnections } = await import("./proxy.ts");
+  assert.equal(typeof listConnections, "function");
+});
+
 test("buildMailUrl list/get/send", () => {
   assert.equal(
     buildMailUrl("http://proxy", "p", "e", "list", "limit=20"),
