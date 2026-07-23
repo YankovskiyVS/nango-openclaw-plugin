@@ -31,6 +31,24 @@ test("buildUrl appends query", () => {
   );
 });
 
+test("buildUrl preserves disk upload query with path", () => {
+  const q = new URLSearchParams({
+    path: "/Тезисы Highload++.pdf",
+    overwrite: "true",
+  }).toString();
+  const url = buildUrl(
+    "http://proxy:8080",
+    "proj",
+    "evo",
+    "yandex-disk",
+    "v1/disk/resources/upload",
+    q,
+  );
+  assert.match(url, /\/proxy\/yandex-disk\/v1\/disk\/resources\/upload\?/);
+  assert.match(url, /path=/);
+  assert.match(url, /overwrite=true/);
+});
+
 test("buildMailUrl list/get/send", () => {
   assert.equal(
     buildMailUrl("http://proxy", "p", "e", "list", "limit=20"),

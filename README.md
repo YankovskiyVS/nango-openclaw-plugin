@@ -46,12 +46,14 @@ Bitrix/amo use tenant hosts (`https://{domain}/rest`, `https://{subdomain}.amocr
 
 ## Behaviour
 
-- Operator writes **full catalog** into `plugins.entries.nango-proxy.config.providers` with `enabled: false` and empty `connectionId`.
-- On connect: flip that entry to `enabled: true` + real `connectionId` (no add/remove of list members).
-- `register()` activates tools only for `enabled && connectionId`.
-- Config lives on a **local emptyDir** (not S3 PVC) so Gateway fsnotify/hot-reload sees the flip.
-- `before_tool_call` blocks calls when the connection is missing/unavailable.
-- `nango_list_connections` returns `upstreamBase` + `examples` for active connections.
+- Operator writes **full catalog** into `plugins.entries.nango-proxy.config.providers`
+  (`enabled: false`, empty `connectionId`).
+- Plugin **registers every catalog tool at startup** as `optional: true` (stable tool spec).
+- By default tools are hidden; operator puts enabled providers' tool names into `tools.alsoAllow`.
+- On connect: `enabled: true` + `connectionId`, and matching tools appear in `tools.alsoAllow`.
+- Hot-reload of plugin config / tools.alsoAllow — no Gateway restart.
+- `before_tool_call` still blocks calls when the connection is missing/unavailable.
+- `nango_list_connections` is always registered (required) and lists enabled connections.
 
 ## Runtime env (injected by evoclaw-operator)
 

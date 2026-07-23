@@ -249,6 +249,11 @@ const manifest = {
     },
   },
   contracts: { tools: contractTools },
+  toolMetadata: Object.fromEntries(
+    contractTools
+      .filter((name) => name !== "nango_list_connections")
+      .map((name) => [name, { optional: true }]),
+  ),
 };
 
 writeFileSync(

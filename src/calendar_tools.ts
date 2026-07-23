@@ -1,7 +1,14 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { buildToolDescription, type ProviderMeta } from "./catalog.js";
-import { type ProviderConfig, type ResolvedRuntime, providerKey } from "./config.js";
+import { type GetRuntime } from "./config.js";
 import { calendarCall } from "./proxy.js";
+
+function registerOptionalTool(
+  api: OpenClawPluginApi,
+  tool: Parameters<OpenClawPluginApi["registerTool"]>[0],
+) {
+  api.registerTool(tool, { optional: true });
+}
 
 function toolResult(payload: unknown): {
   content: Array<{ type: "text"; text: string }>;
@@ -21,17 +28,19 @@ function tryParseJSON(text: string): unknown {
 
 export function registerCalendarTools(
   api: OpenClawPluginApi,
-  runtime: ResolvedRuntime,
-  provider: ProviderConfig,
+  getRuntime: GetRuntime,
   meta: ProviderMeta,
 ): string[] {
-  const label = provider.displayName || meta.displayName || providerKey(provider);
+  const label = meta.displayName || meta.key;
   const registered: string[] = [];
-  const base = {
-    proxyBaseUrl: runtime.proxyBaseUrl,
-    projectId: runtime.projectId,
-    evoclawId: runtime.evoclawId,
-    apiKey: runtime.apiKey,
+  const base = () => {
+    const runtime = getRuntime();
+    return {
+      proxyBaseUrl: runtime.proxyBaseUrl,
+      projectId: runtime.projectId,
+      evoclawId: runtime.evoclawId,
+      apiKey: runtime.apiKey,
+    };
   };
 
   for (const t of meta.tools) {
@@ -40,18 +49,18 @@ export function registerCalendarTools(
 
     switch (action) {
       case "list_calendars":
-        api.registerTool({
+        registerOptionalTool(api, {
           name: t.name,
           description: desc,
           parameters: { type: "object", additionalProperties: false, properties: {} },
           async execute() {
-            const res = await calendarCall({ ...base, action: "list_calendars" });
+            const res = await calendarCall({ ...base(), action: "list_calendars" });
             return toolResult({ status: res.status, body: tryParseJSON(res.bodyText) });
           },
         });
         break;
       case "list_events":
-        api.registerTool({
+        registerOptionalTool(api, {
           name: t.name,
           description: desc,
           parameters: {
@@ -84,7 +93,7 @@ export function registerCalendarTools(
         });
         break;
       case "get_event":
-        api.registerTool({
+        registerOptionalTool(api, {
           name: t.name,
           description: desc,
           parameters: {
@@ -105,7 +114,7 @@ export function registerCalendarTools(
         });
         break;
       case "create_event":
-        api.registerTool({
+        registerOptionalTool(api, {
           name: t.name,
           description: desc,
           parameters: {
@@ -144,7 +153,7 @@ export function registerCalendarTools(
         });
         break;
       case "update_event":
-        api.registerTool({
+        registerOptionalTool(api, {
           name: t.name,
           description: desc,
           parameters: {
@@ -172,7 +181,7 @@ export function registerCalendarTools(
         });
         break;
       case "delete_event":
-        api.registerTool({
+        registerOptionalTool(api, {
           name: t.name,
           description: desc,
           parameters: {

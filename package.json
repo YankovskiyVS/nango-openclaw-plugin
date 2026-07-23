@@ -27,7 +27,7 @@
     "pretypecheck": "npm run generate",
     "typecheck": "tsc --noEmit",
     "pretest": "npm run generate",
-    "test": "node --import tsx --test src/catalog.test.ts src/proxy.test.ts"
+    "test": "node --import tsx --test src/catalog.test.ts src/proxy.test.ts src/disk_tools.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

@@ -45,7 +45,9 @@ test("yandex-disk and yandex-calendar expose CRUD tools", () => {
   assert.equal(disk.kind, "disk");
   assert.ok(disk.tools.some((t) => t.action === "mkdir"));
   assert.ok(disk.tools.some((t) => t.action === "delete"));
+  assert.ok(disk.tools.some((t) => t.action === "upload"));
   assert.ok(CATALOG_BY_TOOL.has("nango_yandex_disk_upload_link"));
+  assert.ok(CATALOG_BY_TOOL.has("nango_yandex_disk_upload"));
 
   const cal = CATALOG_BY_KEY.get("yandex-calendar");
   assert.ok(cal);

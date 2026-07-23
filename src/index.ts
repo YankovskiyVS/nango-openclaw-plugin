@@ -1,22 +1,26 @@
 /**
  * nango-openclaw-plugin — OpenClaw tools for ai-assistant-nango-proxy.
  *
- * Registers tools for each active provider in plugins.entries.nango-proxy.config.providers.
- * For kind=mail (yandex-mail): registers list/get/send against /mail/* API.
- * Hot-reload of that config re-runs register() without restarting the Gateway.
+ * Always registers the full catalog of tools at load time.
+ * plugins.entries.nango-proxy.config.providers lists every provider with
+ * enabled:false by default; connect flips enabled:true (+ connectionId).
+ * Hot-reload of that config gates tools without re-registering / restart.
  */
 
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import {
-  CATALOG_BY_KEY,
+  CATALOG,
   CATALOG_BY_TOOL,
   LIST_CONNECTIONS_TOOL,
   buildToolDescription,
   type ProviderMeta,
 } from "./catalog.js";
 import {
+  type GetRuntime,
   type PluginConfig,
-  type ProviderConfig,
+  activeProviders,
+  findProvider,
+  isProviderActive,
   providerKey,
   resolveRuntime,
 } from "./config.js";
@@ -26,6 +30,18 @@ import { registerDiskTools } from "./disk_tools.js";
 
 const PLUGIN_ID = "nango-proxy";
 const PLUGIN_VERSION = "0.4.0";
+
+function readPluginConfig(api: OpenClawPluginApi): PluginConfig {
+  return ((api as { pluginConfig?: PluginConfig }).pluginConfig ??
+    {}) as PluginConfig;
+}
+
+function registerOptionalTool(
+  api: OpenClawPluginApi,
+  tool: Parameters<OpenClawPluginApi["registerTool"]>[0],
+) {
+  api.registerTool(tool, { optional: true });
+}
 
 function callParameters(meta: ProviderMeta) {
   const example =
@@ -76,15 +92,13 @@ function tryParseJSON(text: string): unknown {
 
 function registerProxyTool(
   api: OpenClawPluginApi,
-  runtime: ReturnType<typeof resolveRuntime>,
-  provider: ProviderConfig,
+  getRuntime: GetRuntime,
   meta: ProviderMeta,
 ): string[] {
-  const key = providerKey(provider);
-  const label = provider.displayName || meta.displayName || key;
+  const label = meta.displayName || meta.key;
   const tool = meta.tools[0]?.name || meta.tool;
 
-  api.registerTool({
+  registerOptionalTool(api, {
     name: tool,
     description: buildToolDescription(meta, label, tool),
     parameters: callParameters(meta),
@@ -97,6 +111,7 @@ function registerProxyTool(
         data?: unknown;
       },
     ) {
+      const runtime = getRuntime();
       const endpoint = (params.endpoint || "").trim();
       if (!endpoint) {
         return toolResult({ error: "endpoint is required" });
@@ -106,7 +121,7 @@ function registerProxyTool(
         projectId: runtime.projectId,
         evoclawId: runtime.evoclawId,
         apiKey: runtime.apiKey,
-        providerConfigKey: key,
+        providerConfigKey: meta.key,
         method: params.method || "GET",
         endpoint,
         query: params.query,
@@ -123,17 +138,16 @@ function registerProxyTool(
 
 function registerMailTools(
   api: OpenClawPluginApi,
-  runtime: ReturnType<typeof resolveRuntime>,
-  provider: ProviderConfig,
+  getRuntime: GetRuntime,
   meta: ProviderMeta,
 ): string[] {
-  const label = provider.displayName || meta.displayName || meta.key;
+  const label = meta.displayName || meta.key;
   const registered: string[] = [];
 
   for (const t of meta.tools) {
     const action = t.action as "list" | "get" | "send";
     if (action === "list") {
-      api.registerTool({
+      registerOptionalTool(api, {
         name: t.name,
         description: buildToolDescription(meta, label, t.name),
         parameters: {
@@ -156,6 +170,7 @@ function registerMailTools(
           _id: string,
           params: { mailbox?: string; limit?: number },
         ) {
+          const runtime = getRuntime();
           const q = new URLSearchParams();
           if (params.mailbox) q.set("mailbox", String(params.mailbox));
           if (params.limit != null) q.set("limit", String(params.limit));
@@ -174,7 +189,7 @@ function registerMailTools(
         },
       });
     } else if (action === "get") {
-      api.registerTool({
+      registerOptionalTool(api, {
         name: t.name,
         description: buildToolDescription(meta, label, t.name),
         parameters: {
@@ -197,6 +212,7 @@ function registerMailTools(
           _id: string,
           params: { uid?: number; mailbox?: string },
         ) {
+          const runtime = getRuntime();
           if (params.uid == null) {
             return toolResult({ error: "uid is required" });
           }
@@ -217,7 +233,7 @@ function registerMailTools(
         },
       });
     } else if (action === "send") {
-      api.registerTool({
+      registerOptionalTool(api, {
         name: t.name,
         description: buildToolDescription(meta, label, t.name),
         parameters: {
@@ -248,6 +264,7 @@ function registerMailTools(
             body?: string;
           },
         ) {
+          const runtime = getRuntime();
           if (!params.to?.length) {
             return toolResult({ error: "to is required" });
           }
@@ -290,12 +307,12 @@ export default {
     "Tools for 3rd-party providers via ai-assistant-nango-proxy (self-hosted Nango)",
 
   register(api: OpenClawPluginApi) {
-    const cfg = ((api as { pluginConfig?: PluginConfig }).pluginConfig ??
-      {}) as PluginConfig;
+    const getRuntime: GetRuntime = () =>
+      resolveRuntime(readPluginConfig(api));
 
-    let runtime: ReturnType<typeof resolveRuntime>;
+    let boot: ReturnType<typeof resolveRuntime>;
     try {
-      runtime = resolveRuntime(cfg);
+      boot = getRuntime();
     } catch (err) {
       api.logger.error(
         `[nango-proxy] failed to resolve runtime: ${err instanceof Error ? err.message : String(err)}`,
@@ -303,30 +320,17 @@ export default {
       return;
     }
 
-    const active = runtime.providers;
+    // Full catalog always — connect only flips providers[].enabled in config.
     const registered: string[] = [];
-
-    for (const p of active) {
-      const key = providerKey(p);
-      if (!key || !p.connectionId?.trim()) {
-        api.logger.warn(
-          `[nango-proxy] skip provider with missing type/connectionId: ${JSON.stringify(p)}`,
-        );
-        continue;
-      }
-      const meta = CATALOG_BY_KEY.get(key);
-      if (!meta) {
-        api.logger.warn(`[nango-proxy] unknown provider type (not in catalog): ${key}`);
-        continue;
-      }
+    for (const meta of CATALOG) {
       if (meta.kind === "mail") {
-        registered.push(...registerMailTools(api, runtime, p, meta));
+        registered.push(...registerMailTools(api, getRuntime, meta));
       } else if (meta.kind === "disk") {
-        registered.push(...registerDiskTools(api, runtime, p, meta));
+        registered.push(...registerDiskTools(api, getRuntime, meta));
       } else if (meta.kind === "calendar") {
-        registered.push(...registerCalendarTools(api, runtime, p, meta));
+        registered.push(...registerCalendarTools(api, getRuntime, meta));
       } else {
-        registered.push(...registerProxyTool(api, runtime, p, meta));
+        registered.push(...registerProxyTool(api, getRuntime, meta));
       }
     }
 
@@ -340,10 +344,12 @@ export default {
         properties: {},
       },
       async execute() {
+        const runtime = getRuntime();
+        const active = activeProviders(runtime.providers);
         return toolResult(
           active.map((p) => {
             const key = providerKey(p);
-            const meta = CATALOG_BY_KEY.get(key);
+            const meta = CATALOG.find((m) => m.key === key);
             return {
               type: key,
               connectionId: p.connectionId,
@@ -352,7 +358,7 @@ export default {
               tools: meta?.tools?.map((t) => t.name) ?? (meta ? [meta.tool] : []),
               upstreamBase: meta?.upstreamBase,
               examples: meta?.examples,
-              enabled: p.enabled !== false,
+              enabled: true,
             };
           }),
         );
@@ -368,11 +374,13 @@ export default {
       if (!meta) {
         return { block: false };
       }
-      const p = active.find((x) => providerKey(x) === meta.key);
-      if (!p) {
+      // Live config — hot-reload flips enabled without re-registering tools.
+      const runtime = getRuntime();
+      const p = findProvider(runtime.providers, meta.key);
+      if (!isProviderActive(p)) {
         return {
           block: true,
-          reason: `Connection for ${meta.key} is not enabled — tool temporarily blocked.`,
+          reason: `Connection for ${meta.key} is not enabled — connect the provider first.`,
         };
       }
       const alive = await isConnectionAlive({
@@ -391,8 +399,10 @@ export default {
       return { block: false };
     });
 
+    const enabledAtBoot = activeProviders(boot.providers).map(providerKey);
     api.logger.info(
-      `[nango-proxy] v${PLUGIN_VERSION} registered tools: ${[...registered, LIST_CONNECTIONS_TOOL].join(", ") || "(none)"}`,
+      `[nango-proxy] v${PLUGIN_VERSION} registered ${registered.length + 1} tools ` +
+        `(full catalog); enabled now: ${enabledAtBoot.join(", ") || "(none)"}`,
     );
   },
 };

@@ -26,8 +26,9 @@ providers:
     upstreamBase: https://cloud-api.yandex.net
     docs: https://yandex.com/dev/disk/api/concepts/about.html
     notes: >
-      Connecting yandex-disk enables dedicated tools (info/list/get/mkdir/upload_link/download_link/copy/move/delete/publish/unpublish/trash_*).
+      Connecting yandex-disk enables dedicated tools (info/list/get/mkdir/upload/upload_link/download_link/copy/move/delete/publish/unpublish/trash_*).
       Calls go through Nango proxy to Disk REST API with OAuth.
+      All Disk paths must be absolute and start with / (e.g. /folder/file.pdf). Prefer upload over upload_link.
     tools:
       - name: info
         description: Disk quota and meta (GET /v1/disk)
@@ -41,10 +42,16 @@ providers:
         description: Recently uploaded files
       - name: mkdir
         description: Create folder (PUT /v1/disk/resources?path=)
+      - name: upload
+        description: >
+          Upload a local file to Yandex Disk (gets upload URL then PUT bytes).
+          Pass destination path (must start with /) and localPath on the EvoClaw host.
       - name: upload_link
-        description: Get one-shot upload URL (GET /v1/disk/resources/upload)
+        description: >
+          Get one-shot upload URL only (GET /v1/disk/resources/upload?path=).
+          Prefer nango_yandex_disk_upload for full upload. path must start with /.
       - name: download_link
-        description: Get download URL (GET /v1/disk/resources/download)
+        description: Get download URL (GET /v1/disk/resources/download?path=). path must start with /.
       - name: copy
         description: Copy resource (POST /v1/disk/resources/copy)
       - name: move
