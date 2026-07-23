@@ -1,0 +1,38 @@
+{
+  "name": "nango-openclaw-plugin",
+  "version": "0.2.0",
+  "description": "OpenClaw tools for calling 3rd-party providers via ai-assistant-nango-proxy",
+  "type": "module",
+  "openclaw": {
+    "extensions": ["./src/index.ts"]
+  },
+  "files": [
+    "src/",
+    "catalog/",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "nango",
+    "integrations"
+  ],
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "openclaw": "*"
+  },
+  "scripts": {
+    "generate": "node scripts/generate-from-catalog.mjs",
+    "pretypecheck": "npm run generate",
+    "typecheck": "tsc --noEmit",
+    "pretest": "npm run generate",
+    "test": "node --import tsx --test src/catalog.test.ts src/proxy.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "yaml": "^2.7.0"
+  }
+}

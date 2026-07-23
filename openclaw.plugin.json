@@ -1,0 +1,108 @@
+{
+  "id": "nango-proxy",
+  "name": "Nango Proxy Connector",
+  "description": "Tools OpenClaw for calling 3rd-party providers via ai-assistant-nango-proxy (self-hosted Nango). Catalog: catalog/providers.yaml",
+  "version": "0.2.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "proxyBaseUrl": {
+        "type": "string",
+        "description": "Override NANGO_PROXY_URL, e.g. http://ai-assistant-nango-proxy.ai-assistant-nango-proxy.svc.cluster.local:8080"
+      },
+      "apiKeyEnv": {
+        "type": "string",
+        "description": "Env var with Cloud.ru API key (default CLOUDRU_API_KEY)",
+        "default": "CLOUDRU_API_KEY"
+      },
+      "providers": {
+        "type": "array",
+        "description": "Active connections; managed by control plane / operator",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "yandex-id",
+                "yandex-disk",
+                "yandex-mail",
+                "yandex-calendar",
+                "yandex-direct",
+                "yandex-maps",
+                "yandex-market",
+                "yandex-delivery",
+                "bitrix24",
+                "bitrix24-crm",
+                "bitrix24-tasks",
+                "bitrix24-disk",
+                "bitrix24-im",
+                "bitrix24-user",
+                "bitrix24-calendar",
+                "bitrix24-bizproc",
+                "bitrix24-telephony",
+                "amocrm",
+                "amocrm-crm",
+                "amocrm-catalog",
+                "amocrm-chats",
+                "amocrm-telephony",
+                "amocrm-tasks",
+                "amocrm-events",
+                "amocrm-users"
+              ]
+            },
+            "providerConfigKey": {
+              "type": "string"
+            },
+            "connectionId": {
+              "type": "string"
+            },
+            "displayName": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "required": [
+            "type",
+            "connectionId"
+          ]
+        }
+      }
+    }
+  },
+  "contracts": {
+    "tools": [
+      "nango_yandex_id_call",
+      "nango_yandex_disk_call",
+      "nango_yandex_mail_call",
+      "nango_yandex_calendar_call",
+      "nango_yandex_direct_call",
+      "nango_yandex_maps_call",
+      "nango_yandex_market_call",
+      "nango_yandex_delivery_call",
+      "nango_bitrix24_call",
+      "nango_bitrix24_crm_call",
+      "nango_bitrix24_tasks_call",
+      "nango_bitrix24_disk_call",
+      "nango_bitrix24_im_call",
+      "nango_bitrix24_user_call",
+      "nango_bitrix24_calendar_call",
+      "nango_bitrix24_bizproc_call",
+      "nango_bitrix24_telephony_call",
+      "nango_amocrm_call",
+      "nango_amocrm_crm_call",
+      "nango_amocrm_catalog_call",
+      "nango_amocrm_chats_call",
+      "nango_amocrm_telephony_call",
+      "nango_amocrm_tasks_call",
+      "nango_amocrm_events_call",
+      "nango_amocrm_users_call",
+      "nango_list_connections"
+    ]
+  }
+}

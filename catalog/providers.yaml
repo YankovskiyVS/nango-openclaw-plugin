@@ -1,0 +1,276 @@
+# Source of truth for nango-openclaw-plugin tools.
+# Edit this file, then run: npm run generate
+#
+# Call path through ai-assistant-nango-proxy:
+#   {NANGO_PROXY_URL}/api/v1/{projectId}/evo-claws/{evoclawId}/proxy/{key}/{endpoint}
+# where {endpoint} is relative to upstreamBase (Nango resolves the real upstream URL).
+
+providers:
+  - key: yandex-id
+    displayName: Yandex ID
+    family: yandex
+    hint: Yandex profile, login, email, avatar
+    upstreamBase: https://login.yandex.ru
+    aliases: [yandex]
+    examples:
+      - method: GET
+        endpoint: info
+        query: format=json
+        description: Get connected user profile
+
+  - key: yandex-disk
+    displayName: Yandex Disk
+    family: yandex
+    hint: Yandex Disk files and folders
+    upstreamBase: https://cloud-api.yandex.net
+    docs: https://yandex.com/dev/disk/api/concepts/about.html
+    examples:
+      - method: GET
+        endpoint: v1/disk
+        description: Disk meta
+      - method: GET
+        endpoint: v1/disk/resources
+        query: path=/
+        description: List root resources
+
+  - key: yandex-mail
+    displayName: Yandex Mail
+    family: yandex
+    hint: Yandex Mail identity (IMAP/SMTP mail is not REST via proxy)
+    upstreamBase: https://login.yandex.ru
+    notes: Mailbox read/send is IMAP/SMTP + XOAUTH2, not Nango REST proxy.
+    examples:
+      - method: GET
+        endpoint: info
+        query: format=json
+        description: Mailbox identity via login.info
+
+  - key: yandex-calendar
+    displayName: Yandex Calendar
+    family: yandex
+    hint: Yandex Calendar events and calendars
+    upstreamBase: https://caldav.yandex.ru
+    examples:
+      - method: GET
+        endpoint: calendars/
+        description: List calendars
+
+  - key: yandex-direct
+    displayName: Yandex Direct
+    family: yandex
+    hint: Yandex Direct campaigns, ads, reports
+    upstreamBase: https://api.direct.yandex.com
+    examples:
+      - method: POST
+        endpoint: json/v5/campaigns
+        description: Get campaigns (JSON-RPC body)
+
+  - key: yandex-maps
+    displayName: Yandex Maps
+    family: yandex
+    hint: Yandex Maps bookmarks / saved places
+    upstreamBase: https://api-maps.yandex.ru
+    examples:
+      - method: GET
+        endpoint: v1/
+        description: Maps bookmarks API root
+
+  - key: yandex-market
+    displayName: Yandex Market Partner
+    family: yandex
+    hint: Yandex Market partner campaigns and offers
+    upstreamBase: https://api.partner.market.yandex.ru
+    examples:
+      - method: GET
+        endpoint: v2/campaigns
+        description: List partner campaigns
+
+  - key: yandex-delivery
+    displayName: Yandex Delivery Partner
+    family: yandex
+    hint: Yandex Delivery offers, claims, logistics
+    upstreamBase: https://b2b.taxi.yandex.net
+    examples:
+      - method: POST
+        endpoint: api/b2b/platform/offers/create
+        description: Create delivery offer
+
+  - key: bitrix24
+    displayName: Bitrix24
+    family: bitrix24
+    hint: Generic Bitrix24 REST
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: user.current
+        description: Current user
+
+  - key: bitrix24-crm
+    displayName: Bitrix24 CRM
+    family: bitrix24
+    hint: Bitrix24 leads, deals, contacts, companies
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: crm.lead.list
+        description: List leads
+      - method: GET
+        endpoint: crm.deal.list
+        description: List deals
+
+  - key: bitrix24-tasks
+    displayName: Bitrix24 Tasks
+    family: bitrix24
+    hint: Bitrix24 tasks and projects
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: tasks.task.list
+        description: List tasks
+
+  - key: bitrix24-disk
+    displayName: Bitrix24 Disk
+    family: bitrix24
+    hint: Bitrix24 Drive files and folders
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: disk.storage.getlist
+        description: List storages
+
+  - key: bitrix24-im
+    displayName: Bitrix24 Messenger
+    family: bitrix24
+    hint: Bitrix24 chats and open lines
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: im.recent.get
+        description: Recent chats
+
+  - key: bitrix24-user
+    displayName: Bitrix24 Users
+    family: bitrix24
+    hint: Bitrix24 employees and departments
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: user.current
+        description: Current user
+      - method: GET
+        endpoint: department.get
+        description: Departments
+
+  - key: bitrix24-calendar
+    displayName: Bitrix24 Calendar
+    family: bitrix24
+    hint: Bitrix24 calendar and rooms
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: calendar.section.get
+        description: Calendar sections
+
+  - key: bitrix24-bizproc
+    displayName: Bitrix24 Bizproc
+    family: bitrix24
+    hint: Bitrix24 workflows and robots
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: bizproc.workflow.template.list
+        description: Workflow templates
+
+  - key: bitrix24-telephony
+    displayName: Bitrix24 Telephony
+    family: bitrix24
+    hint: Bitrix24 calls and records
+    upstreamBase: "https://{domain}/rest"
+    examples:
+      - method: GET
+        endpoint: telephony.externalLine.get
+        description: External lines
+
+  - key: amocrm
+    displayName: amoCRM
+    family: amocrm
+    hint: Generic amoCRM REST
+    upstreamBase: "https://{subdomain}.amocrm.ru"
+    examples:
+      - method: GET
+        endpoint: api/v4/account
+        description: Account info
+
+  - key: amocrm-crm
+    displayName: amoCRM CRM
+    family: amocrm
+    hint: amoCRM deals, contacts, pipelines
+    upstreamBase: "https://{subdomain}.amocrm.ru"
+    examples:
+      - method: GET
+        endpoint: api/v4/leads
+        description: List leads
+      - method: GET
+        endpoint: api/v4/contacts
+        description: List contacts
+
+  - key: amocrm-catalog
+    displayName: amoCRM Catalog
+    family: amocrm
+    hint: amoCRM products and catalogs
+    upstreamBase: "https://{subdomain}.amocrm.ru"
+    examples:
+      - method: GET
+        endpoint: api/v4/catalogs
+        description: List catalogs
+
+  - key: amocrm-chats
+    displayName: amoCRM Chats
+    family: amocrm
+    hint: amoCRM messengers and channels
+    upstreamBase: "https://{subdomain}.amocrm.ru"
+    examples:
+      - method: GET
+        endpoint: api/v4/talks
+        description: List talks
+
+  - key: amocrm-telephony
+    displayName: amoCRM Telephony
+    family: amocrm
+    hint: amoCRM calls and records
+    upstreamBase: "https://{subdomain}.amocrm.ru"
+    examples:
+      - method: GET
+        endpoint: api/v4/events
+        query: filter[type]=incoming_call
+        description: Incoming call events
+
+  - key: amocrm-tasks
+    displayName: amoCRM Tasks
+    family: amocrm
+    hint: amoCRM tasks and reminders
+    upstreamBase: "https://{subdomain}.amocrm.ru"
+    examples:
+      - method: GET
+        endpoint: api/v4/tasks
+        description: List tasks
+
+  - key: amocrm-events
+    displayName: amoCRM Events
+    family: amocrm
+    hint: amoCRM activity history and notes
+    upstreamBase: "https://{subdomain}.amocrm.ru"
+    examples:
+      - method: GET
+        endpoint: api/v4/events
+        description: Activity feed
+
+  - key: amocrm-users
+    displayName: amoCRM Users
+    family: amocrm
+    hint: amoCRM managers and groups
+    upstreamBase: "https://{subdomain}.amocrm.ru"
+    examples:
+      - method: GET
+        endpoint: api/v4/users
+        description: List users
