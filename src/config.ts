@@ -3,8 +3,10 @@ export type ProviderConfig = {
   type: string;
   /** Optional override; defaults to type. */
   providerConfigKey?: string;
-  connectionId: string;
+  /** Empty when the provider is listed but disabled (catalog-first config). */
+  connectionId?: string;
   displayName?: string;
+  /** Default false in catalog dump; flipped to true on connect. */
   enabled?: boolean;
 };
 
@@ -41,7 +43,10 @@ export function resolveRuntime(cfg: PluginConfig | undefined): ResolvedRuntime {
   ).replace(/\/$/, "");
 
   const apiKeyEnv = cfg?.apiKeyEnv?.trim() || "CLOUDRU_API_KEY";
-  const providers = (cfg?.providers ?? []).filter((p) => p.enabled !== false);
+  // Catalog-first: config always lists every provider; tools only for enabled + connectionId.
+  const providers = (cfg?.providers ?? []).filter(
+    (p) => p.enabled !== false && Boolean(p.connectionId?.trim()),
+  );
 
   return {
     proxyBaseUrl,

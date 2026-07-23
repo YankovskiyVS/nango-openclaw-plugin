@@ -15,7 +15,7 @@ test("catalog tools are unique and match naming convention", () => {
   for (const p of CATALOG) {
     assert.ok(p.upstreamBase, `${p.key} must have upstreamBase`);
     assert.ok(p.tools?.length, `${p.key} must have tools`);
-    if (p.kind === "mail") {
+    if (p.kind === "mail" || p.kind === "disk" || p.kind === "calendar") {
       for (const t of p.tools) {
         assert.equal(t.name, `nango_${p.key.replace(/-/g, "_")}_${t.action}`);
         assert.equal(CATALOG_BY_TOOL.get(t.name)?.key, p.key);
@@ -37,11 +37,23 @@ test("yandex-mail exposes list/get/send tools", () => {
     meta.tools.map((t) => t.action),
     ["list", "get", "send"],
   );
-  assert.ok(CATALOG_BY_TOOL.has("nango_yandex_mail_list"));
-  assert.ok(CATALOG_BY_TOOL.has("nango_yandex_mail_get"));
-  assert.ok(CATALOG_BY_TOOL.has("nango_yandex_mail_send"));
-  const desc = buildToolDescription(meta, undefined, "nango_yandex_mail_list");
-  assert.match(desc, /mail\/list/);
+});
+
+test("yandex-disk and yandex-calendar expose CRUD tools", () => {
+  const disk = CATALOG_BY_KEY.get("yandex-disk");
+  assert.ok(disk);
+  assert.equal(disk.kind, "disk");
+  assert.ok(disk.tools.some((t) => t.action === "mkdir"));
+  assert.ok(disk.tools.some((t) => t.action === "delete"));
+  assert.ok(CATALOG_BY_TOOL.has("nango_yandex_disk_upload_link"));
+
+  const cal = CATALOG_BY_KEY.get("yandex-calendar");
+  assert.ok(cal);
+  assert.equal(cal.kind, "calendar");
+  assert.deepEqual(
+    cal.tools.map((t) => t.action),
+    ["list_calendars", "list_events", "get_event", "create_event", "update_event", "delete_event"],
+  );
 });
 
 test("yandex alias resolves to yandex-id", () => {

@@ -19,8 +19,8 @@ export type ProviderMeta = {
   /** First tool name (compat). */
   tool: string;
   tools: ProviderTool[];
-  /** "proxy" = generic REST via /proxy; "mail" = IMAP/SMTP via /mail/*. */
-  kind: "proxy" | "mail" | string;
+  /** "proxy" | "mail" | "disk" | "calendar" */
+  kind: "proxy" | "mail" | "disk" | "calendar" | string;
   displayName: string;
   family: string;
   hint: string;
@@ -62,21 +62,97 @@ export const CATALOG: readonly ProviderMeta[] = [
   },
   {
     "key": "yandex-disk",
-    "tool": "nango_yandex_disk_call",
+    "tool": "nango_yandex_disk_info",
     "tools": [
       {
-        "name": "nango_yandex_disk_call",
-        "action": "call",
-        "description": ""
+        "name": "nango_yandex_disk_info",
+        "action": "info",
+        "description": "Disk quota and meta (GET /v1/disk)"
+      },
+      {
+        "name": "nango_yandex_disk_list",
+        "action": "list",
+        "description": "List folder resources (GET /v1/disk/resources?path=)"
+      },
+      {
+        "name": "nango_yandex_disk_get",
+        "action": "get",
+        "description": "Get file/folder meta (GET /v1/disk/resources?path=)"
+      },
+      {
+        "name": "nango_yandex_disk_files",
+        "action": "files",
+        "description": "Flat list of all files (GET /v1/disk/resources/files)"
+      },
+      {
+        "name": "nango_yandex_disk_last_uploaded",
+        "action": "last_uploaded",
+        "description": "Recently uploaded files"
+      },
+      {
+        "name": "nango_yandex_disk_mkdir",
+        "action": "mkdir",
+        "description": "Create folder (PUT /v1/disk/resources?path=)"
+      },
+      {
+        "name": "nango_yandex_disk_upload_link",
+        "action": "upload_link",
+        "description": "Get one-shot upload URL (GET /v1/disk/resources/upload)"
+      },
+      {
+        "name": "nango_yandex_disk_download_link",
+        "action": "download_link",
+        "description": "Get download URL (GET /v1/disk/resources/download)"
+      },
+      {
+        "name": "nango_yandex_disk_copy",
+        "action": "copy",
+        "description": "Copy resource (POST /v1/disk/resources/copy)"
+      },
+      {
+        "name": "nango_yandex_disk_move",
+        "action": "move",
+        "description": "Move/rename resource (POST /v1/disk/resources/move)"
+      },
+      {
+        "name": "nango_yandex_disk_delete",
+        "action": "delete",
+        "description": "Delete to trash or permanently (DELETE /v1/disk/resources)"
+      },
+      {
+        "name": "nango_yandex_disk_publish",
+        "action": "publish",
+        "description": "Publish resource (PUT …/publish)"
+      },
+      {
+        "name": "nango_yandex_disk_unpublish",
+        "action": "unpublish",
+        "description": "Unpublish resource (PUT …/unpublish)"
+      },
+      {
+        "name": "nango_yandex_disk_trash_list",
+        "action": "trash_list",
+        "description": "List trash (GET /v1/disk/trash/resources)"
+      },
+      {
+        "name": "nango_yandex_disk_trash_restore",
+        "action": "trash_restore",
+        "description": "Restore from trash (PUT …/trash/resources/restore)"
+      },
+      {
+        "name": "nango_yandex_disk_trash_empty",
+        "action": "trash_empty",
+        "description": "Empty trash (DELETE /v1/disk/trash/resources)"
       }
     ],
-    "kind": "proxy",
+    "kind": "disk",
     "displayName": "Yandex Disk",
     "family": "yandex",
-    "hint": "Yandex Disk files and folders",
+    "hint": "Full Yandex Disk CRUD via REST (cloud-api.yandex.net)",
     "upstreamBase": "https://cloud-api.yandex.net",
     "aliases": [],
     "docs": "https://yandex.com/dev/disk/api/concepts/about.html",
+    "notes": "Connecting yandex-disk enables dedicated tools (info/list/get/mkdir/upload_link/download_link/copy/move/delete/publish/unpublish/trash_*). Calls go through Nango proxy to Disk REST API with OAuth.\n",
     "examples": [
       {
         "method": "GET",
@@ -87,7 +163,19 @@ export const CATALOG: readonly ProviderMeta[] = [
         "method": "GET",
         "endpoint": "v1/disk/resources",
         "query": "path=/",
-        "description": "List root resources"
+        "description": "List root"
+      },
+      {
+        "method": "PUT",
+        "endpoint": "v1/disk/resources",
+        "query": "path=/folder",
+        "description": "Create folder"
+      },
+      {
+        "method": "DELETE",
+        "endpoint": "v1/disk/resources",
+        "query": "path=/file.txt",
+        "description": "Move to trash"
       }
     ]
   },
@@ -117,7 +205,7 @@ export const CATALOG: readonly ProviderMeta[] = [
     "hint": "Read and send Yandex Mail via IMAP/SMTP XOAUTH2 (mail API on nango-proxy)",
     "upstreamBase": "imap.yandex.com / smtp.yandex.com (via /mail/*)",
     "aliases": [],
-    "notes": "Not REST. Connecting yandex-mail enables nango_yandex_mail_list|get|send. Proxy routes: GET /mail/list, GET /mail/get?uid=, POST /mail/send.\n",
+    "notes": "Not REST. Connecting yandex-mail enables nango_yandex_mail_list|get|send. Proxy routes: GET /mail/list, GET /mail/get?uid=, POST /mail/send. User must enable in Yandex Mail → Settings → Email clients: \"From the imap.yandex.com server via IMAP\" and \"App passwords and OAuth tokens\". Then reconnect yandex-mail if IMAP was disabled at connect time.\n",
     "examples": [
       {
         "method": "GET",
@@ -140,25 +228,62 @@ export const CATALOG: readonly ProviderMeta[] = [
   },
   {
     "key": "yandex-calendar",
-    "tool": "nango_yandex_calendar_call",
+    "tool": "nango_yandex_calendar_list_calendars",
     "tools": [
       {
-        "name": "nango_yandex_calendar_call",
-        "action": "call",
-        "description": ""
+        "name": "nango_yandex_calendar_list_calendars",
+        "action": "list_calendars",
+        "description": "List user calendars (CalDAV PROPFIND)"
+      },
+      {
+        "name": "nango_yandex_calendar_list_events",
+        "action": "list_events",
+        "description": "List events in a time range (CalDAV REPORT)"
+      },
+      {
+        "name": "nango_yandex_calendar_get_event",
+        "action": "get_event",
+        "description": "Get one event by href (.ics)"
+      },
+      {
+        "name": "nango_yandex_calendar_create_event",
+        "action": "create_event",
+        "description": "Create event (CalDAV PUT .ics)"
+      },
+      {
+        "name": "nango_yandex_calendar_update_event",
+        "action": "update_event",
+        "description": "Update event by uid (CalDAV PUT .ics)"
+      },
+      {
+        "name": "nango_yandex_calendar_delete_event",
+        "action": "delete_event",
+        "description": "Delete event by href (CalDAV DELETE)"
       }
     ],
-    "kind": "proxy",
+    "kind": "calendar",
     "displayName": "Yandex Calendar",
     "family": "yandex",
-    "hint": "Yandex Calendar events and calendars",
-    "upstreamBase": "https://caldav.yandex.ru",
+    "hint": "Full Yandex Calendar CRUD via CalDAV (caldav.yandex.ru + OAuth)",
+    "upstreamBase": "caldav.yandex.ru (via /calendar/*)",
     "aliases": [],
+    "notes": "Not plain REST. Connecting yandex-calendar enables nango_yandex_calendar_list_calendars|list_events|get_event|create_event|update_event|delete_event. Proxy routes under /calendar/* speak CalDAV with OAuth token (scope calendar:all).\n",
     "examples": [
       {
         "method": "GET",
-        "endpoint": "calendars/",
+        "endpoint": "calendar/calendars",
         "description": "List calendars"
+      },
+      {
+        "method": "GET",
+        "endpoint": "calendar/events",
+        "query": "start=2026-07-01&end=2026-08-01",
+        "description": "List events"
+      },
+      {
+        "method": "POST",
+        "endpoint": "calendar/events",
+        "description": "Create event JSON {summary,start,end,…}"
       }
     ]
   },
@@ -699,7 +824,7 @@ export const CATALOG_BY_TOOL: ReadonlyMap<string, ProviderMeta> = new Map(
 export const LIST_CONNECTIONS_TOOL = "nango_list_connections";
 
 export function allContractTools(): string[] {
-  return ["nango_yandex_id_call","nango_yandex_disk_call","nango_yandex_mail_list","nango_yandex_mail_get","nango_yandex_mail_send","nango_yandex_calendar_call","nango_yandex_direct_call","nango_yandex_maps_call","nango_yandex_market_call","nango_yandex_delivery_call","nango_bitrix24_call","nango_bitrix24_crm_call","nango_bitrix24_tasks_call","nango_bitrix24_disk_call","nango_bitrix24_im_call","nango_bitrix24_user_call","nango_bitrix24_calendar_call","nango_bitrix24_bizproc_call","nango_bitrix24_telephony_call","nango_amocrm_call","nango_amocrm_crm_call","nango_amocrm_catalog_call","nango_amocrm_chats_call","nango_amocrm_telephony_call","nango_amocrm_tasks_call","nango_amocrm_events_call","nango_amocrm_users_call","nango_list_connections"];
+  return ["nango_yandex_id_call","nango_yandex_disk_info","nango_yandex_disk_list","nango_yandex_disk_get","nango_yandex_disk_files","nango_yandex_disk_last_uploaded","nango_yandex_disk_mkdir","nango_yandex_disk_upload_link","nango_yandex_disk_download_link","nango_yandex_disk_copy","nango_yandex_disk_move","nango_yandex_disk_delete","nango_yandex_disk_publish","nango_yandex_disk_unpublish","nango_yandex_disk_trash_list","nango_yandex_disk_trash_restore","nango_yandex_disk_trash_empty","nango_yandex_mail_list","nango_yandex_mail_get","nango_yandex_mail_send","nango_yandex_calendar_list_calendars","nango_yandex_calendar_list_events","nango_yandex_calendar_get_event","nango_yandex_calendar_create_event","nango_yandex_calendar_update_event","nango_yandex_calendar_delete_event","nango_yandex_direct_call","nango_yandex_maps_call","nango_yandex_market_call","nango_yandex_delivery_call","nango_bitrix24_call","nango_bitrix24_crm_call","nango_bitrix24_tasks_call","nango_bitrix24_disk_call","nango_bitrix24_im_call","nango_bitrix24_user_call","nango_bitrix24_calendar_call","nango_bitrix24_bizproc_call","nango_bitrix24_telephony_call","nango_amocrm_call","nango_amocrm_crm_call","nango_amocrm_catalog_call","nango_amocrm_chats_call","nango_amocrm_telephony_call","nango_amocrm_tasks_call","nango_amocrm_events_call","nango_amocrm_users_call","nango_list_connections"];
 }
 
 export function toolNameForKey(key: string): string {
@@ -717,6 +842,28 @@ export function buildToolDescription(meta: ProviderMeta, displayName?: string, t
       meta.hint,
       "Uses ai-assistant-nango-proxy mail API (IMAP/SMTP XOAUTH2). Tokens stay in Nango.",
       "Routes: GET /mail/list, GET /mail/get?uid=, POST /mail/send",
+    ];
+    if (meta.notes) lines.push(`Note: ${meta.notes}`);
+    return lines.filter(Boolean).join(" ");
+  }
+  if (meta.kind === "disk") {
+    const actionHint = meta.tools.find((t) => t.name === toolName)?.description || "";
+    const lines = [
+      `${label} (${meta.key}) — ${actionHint}`.trim(),
+      meta.hint,
+      "Yandex Disk REST via Nango proxy (cloud-api.yandex.net). Full CRUD.",
+    ];
+    if (meta.notes) lines.push(`Note: ${meta.notes}`);
+    if (meta.docs) lines.push(`Docs: ${meta.docs}`);
+    return lines.filter(Boolean).join(" ");
+  }
+  if (meta.kind === "calendar") {
+    const actionHint = meta.tools.find((t) => t.name === toolName)?.description || "";
+    const lines = [
+      `${label} (${meta.key}) — ${actionHint}`.trim(),
+      meta.hint,
+      "Uses ai-assistant-nango-proxy calendar API (CalDAV + OAuth). Tokens stay in Nango.",
+      "Routes: GET /calendar/calendars, GET|POST|PUT /calendar/events, GET|DELETE /calendar/event",
     ];
     if (meta.notes) lines.push(`Note: ${meta.notes}`);
     return lines.filter(Boolean).join(" ");

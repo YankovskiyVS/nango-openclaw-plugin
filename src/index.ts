@@ -21,9 +21,11 @@ import {
   resolveRuntime,
 } from "./config.js";
 import { isConnectionAlive, mailCall, proxyCall } from "./proxy.js";
+import { registerCalendarTools } from "./calendar_tools.js";
+import { registerDiskTools } from "./disk_tools.js";
 
 const PLUGIN_ID = "nango-proxy";
-const PLUGIN_VERSION = "0.3.0";
+const PLUGIN_VERSION = "0.4.0";
 
 function callParameters(meta: ProviderMeta) {
   const example =
@@ -306,7 +308,7 @@ export default {
 
     for (const p of active) {
       const key = providerKey(p);
-      if (!key || !p.connectionId) {
+      if (!key || !p.connectionId?.trim()) {
         api.logger.warn(
           `[nango-proxy] skip provider with missing type/connectionId: ${JSON.stringify(p)}`,
         );
@@ -319,6 +321,10 @@ export default {
       }
       if (meta.kind === "mail") {
         registered.push(...registerMailTools(api, runtime, p, meta));
+      } else if (meta.kind === "disk") {
+        registered.push(...registerDiskTools(api, runtime, p, meta));
+      } else if (meta.kind === "calendar") {
+        registered.push(...registerCalendarTools(api, runtime, p, meta));
       } else {
         registered.push(...registerProxyTool(api, runtime, p, meta));
       }

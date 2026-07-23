@@ -11,6 +11,7 @@ providers:
     family: yandex
     hint: Yandex profile, login, email, avatar
     upstreamBase: https://login.yandex.ru
+    aliases: [yandex]
     examples:
       - method: GET
         endpoint: info
@@ -20,9 +21,46 @@ providers:
   - key: yandex-disk
     displayName: Yandex Disk
     family: yandex
-    hint: Yandex Disk files and folders
+    kind: disk
+    hint: Full Yandex Disk CRUD via REST (cloud-api.yandex.net)
     upstreamBase: https://cloud-api.yandex.net
     docs: https://yandex.com/dev/disk/api/concepts/about.html
+    notes: >
+      Connecting yandex-disk enables dedicated tools (info/list/get/mkdir/upload_link/download_link/copy/move/delete/publish/unpublish/trash_*).
+      Calls go through Nango proxy to Disk REST API with OAuth.
+    tools:
+      - name: info
+        description: Disk quota and meta (GET /v1/disk)
+      - name: list
+        description: List folder resources (GET /v1/disk/resources?path=)
+      - name: get
+        description: Get file/folder meta (GET /v1/disk/resources?path=)
+      - name: files
+        description: Flat list of all files (GET /v1/disk/resources/files)
+      - name: last_uploaded
+        description: Recently uploaded files
+      - name: mkdir
+        description: Create folder (PUT /v1/disk/resources?path=)
+      - name: upload_link
+        description: Get one-shot upload URL (GET /v1/disk/resources/upload)
+      - name: download_link
+        description: Get download URL (GET /v1/disk/resources/download)
+      - name: copy
+        description: Copy resource (POST /v1/disk/resources/copy)
+      - name: move
+        description: Move/rename resource (POST /v1/disk/resources/move)
+      - name: delete
+        description: Delete to trash or permanently (DELETE /v1/disk/resources)
+      - name: publish
+        description: Publish resource (PUT …/publish)
+      - name: unpublish
+        description: Unpublish resource (PUT …/unpublish)
+      - name: trash_list
+        description: List trash (GET /v1/disk/trash/resources)
+      - name: trash_restore
+        description: Restore from trash (PUT …/trash/resources/restore)
+      - name: trash_empty
+        description: Empty trash (DELETE /v1/disk/trash/resources)
     examples:
       - method: GET
         endpoint: v1/disk
@@ -30,7 +68,15 @@ providers:
       - method: GET
         endpoint: v1/disk/resources
         query: path=/
-        description: List root resources
+        description: List root
+      - method: PUT
+        endpoint: v1/disk/resources
+        query: path=/folder
+        description: Create folder
+      - method: DELETE
+        endpoint: v1/disk/resources
+        query: path=/file.txt
+        description: Move to trash
 
   - key: yandex-mail
     displayName: Yandex Mail
@@ -41,6 +87,9 @@ providers:
     notes: >
       Not REST. Connecting yandex-mail enables nango_yandex_mail_list|get|send.
       Proxy routes: GET /mail/list, GET /mail/get?uid=, POST /mail/send.
+      User must enable in Yandex Mail → Settings → Email clients:
+      "From the imap.yandex.com server via IMAP" and "App passwords and OAuth tokens".
+      Then reconnect yandex-mail if IMAP was disabled at connect time.
     tools:
       - name: list
         description: List recent messages in a mailbox (default INBOX)
@@ -64,12 +113,37 @@ providers:
   - key: yandex-calendar
     displayName: Yandex Calendar
     family: yandex
-    hint: Yandex Calendar events and calendars
-    upstreamBase: https://caldav.yandex.ru
+    kind: calendar
+    hint: Full Yandex Calendar CRUD via CalDAV (caldav.yandex.ru + OAuth)
+    upstreamBase: "caldav.yandex.ru (via /calendar/*)"
+    notes: >
+      Not plain REST. Connecting yandex-calendar enables
+      nango_yandex_calendar_list_calendars|list_events|get_event|create_event|update_event|delete_event.
+      Proxy routes under /calendar/* speak CalDAV with OAuth token (scope calendar:all).
+    tools:
+      - name: list_calendars
+        description: List user calendars (CalDAV PROPFIND)
+      - name: list_events
+        description: List events in a time range (CalDAV REPORT)
+      - name: get_event
+        description: Get one event by href (.ics)
+      - name: create_event
+        description: Create event (CalDAV PUT .ics)
+      - name: update_event
+        description: Update event by uid (CalDAV PUT .ics)
+      - name: delete_event
+        description: Delete event by href (CalDAV DELETE)
     examples:
       - method: GET
-        endpoint: calendars/
+        endpoint: calendar/calendars
         description: List calendars
+      - method: GET
+        endpoint: calendar/events
+        query: start=2026-07-01&end=2026-08-01
+        description: List events
+      - method: POST
+        endpoint: calendar/events
+        description: Create event JSON {summary,start,end,…}
 
   - key: yandex-direct
     displayName: Yandex Direct

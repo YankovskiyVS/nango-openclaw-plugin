@@ -25,30 +25,31 @@ function toolName(key) {
   return `nango_${String(key).replace(/-/g, "_")}_call`;
 }
 
-function mailToolName(key, action) {
+function actionToolName(key, action) {
   return `nango_${String(key).replace(/-/g, "_")}_${action}`;
 }
+
+const SPECIAL_KINDS = new Set(["mail", "disk", "calendar"]);
 
 const catalog = providers.map((p) => {
   if (!p?.key) {
     throw new Error("provider entry missing key");
   }
   const kind = p.kind ? String(p.kind) : "proxy";
-  const mailTools = Array.isArray(p.tools)
+  const declaredTools = Array.isArray(p.tools)
     ? p.tools.map((t) => ({
         name: String(t.name),
         description: String(t.description || t.name),
       }))
     : [];
 
-  const tools =
-    kind === "mail"
-      ? mailTools.map((t) => ({
-          name: mailToolName(p.key, t.name),
-          action: t.name,
-          description: t.description,
-        }))
-      : [{ name: toolName(p.key), action: "call", description: "" }];
+  const tools = SPECIAL_KINDS.has(kind)
+    ? declaredTools.map((t) => ({
+        name: actionToolName(p.key, t.name),
+        action: t.name,
+        description: t.description,
+      }))
+    : [{ name: toolName(p.key), action: "call", description: "" }];
 
   return {
     key: String(p.key),
@@ -101,8 +102,8 @@ export type ProviderMeta = {
   /** First tool name (compat). */
   tool: string;
   tools: ProviderTool[];
-  /** "proxy" = generic REST via /proxy; "mail" = IMAP/SMTP via /mail/*. */
-  kind: "proxy" | "mail" | string;
+  /** "proxy" | "mail" | "disk" | "calendar" */
+  kind: "proxy" | "mail" | "disk" | "calendar" | string;
   displayName: string;
   family: string;
   hint: string;
@@ -153,6 +154,28 @@ export function buildToolDescription(meta: ProviderMeta, displayName?: string, t
     if (meta.notes) lines.push(\`Note: \${meta.notes}\`);
     return lines.filter(Boolean).join(" ");
   }
+  if (meta.kind === "disk") {
+    const actionHint = meta.tools.find((t) => t.name === toolName)?.description || "";
+    const lines = [
+      \`\${label} (\${meta.key}) — \${actionHint}\`.trim(),
+      meta.hint,
+      "Yandex Disk REST via Nango proxy (cloud-api.yandex.net). Full CRUD.",
+    ];
+    if (meta.notes) lines.push(\`Note: \${meta.notes}\`);
+    if (meta.docs) lines.push(\`Docs: \${meta.docs}\`);
+    return lines.filter(Boolean).join(" ");
+  }
+  if (meta.kind === "calendar") {
+    const actionHint = meta.tools.find((t) => t.name === toolName)?.description || "";
+    const lines = [
+      \`\${label} (\${meta.key}) — \${actionHint}\`.trim(),
+      meta.hint,
+      "Uses ai-assistant-nango-proxy calendar API (CalDAV + OAuth). Tokens stay in Nango.",
+      "Routes: GET /calendar/calendars, GET|POST|PUT /calendar/events, GET|DELETE /calendar/event",
+    ];
+    if (meta.notes) lines.push(\`Note: \${meta.notes}\`);
+    return lines.filter(Boolean).join(" ");
+  }
   const lines = [
     \`Call \${label} (\${meta.key}) via ai-assistant-nango-proxy → Nango → provider API.\`,
     meta.hint,
@@ -184,7 +207,7 @@ const manifest = {
   name: "Nango Proxy Connector",
   description:
     "Tools OpenClaw for calling 3rd-party providers via ai-assistant-nango-proxy (self-hosted Nango). Catalog: catalog/providers.yaml",
-  version: "0.3.0",
+  version: "0.4.0",
   configSchema: {
     type: "object",
     additionalProperties: false,
@@ -201,18 +224,26 @@ const manifest = {
       },
       providers: {
         type: "array",
-        description: "Active connections; managed by control plane / operator",
+        description:
+          "Full catalog of providers (always present). Operator sets enabled=true + connectionId on connect; disabled entries keep enabled=false.",
         items: {
           type: "object",
           additionalProperties: false,
           properties: {
             type: { type: "string", enum: keys },
             providerConfigKey: { type: "string" },
-            connectionId: { type: "string" },
+            connectionId: {
+              type: "string",
+              description: "Empty string when disabled; required when enabled",
+            },
             displayName: { type: "string" },
-            enabled: { type: "boolean", default: true },
+            enabled: {
+              type: "boolean",
+              default: false,
+              description: "false = catalog stub; true = connected",
+            },
           },
-          required: ["type", "connectionId"],
+          required: ["type"],
         },
       },
     },

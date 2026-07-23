@@ -2,7 +2,7 @@
   "id": "nango-proxy",
   "name": "Nango Proxy Connector",
   "description": "Tools OpenClaw for calling 3rd-party providers via ai-assistant-nango-proxy (self-hosted Nango). Catalog: catalog/providers.yaml",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -18,7 +18,7 @@
       },
       "providers": {
         "type": "array",
-        "description": "Active connections; managed by control plane / operator",
+        "description": "Full catalog of providers (always present). Operator sets enabled=true + connectionId on connect; disabled entries keep enabled=false.",
         "items": {
           "type": "object",
           "additionalProperties": false,
@@ -57,19 +57,20 @@
               "type": "string"
             },
             "connectionId": {
-              "type": "string"
+              "type": "string",
+              "description": "Empty string when disabled; required when enabled"
             },
             "displayName": {
               "type": "string"
             },
             "enabled": {
               "type": "boolean",
-              "default": true
+              "default": false,
+              "description": "false = catalog stub; true = connected"
             }
           },
           "required": [
-            "type",
-            "connectionId"
+            "type"
           ]
         }
       }
@@ -78,11 +79,31 @@
   "contracts": {
     "tools": [
       "nango_yandex_id_call",
-      "nango_yandex_disk_call",
+      "nango_yandex_disk_info",
+      "nango_yandex_disk_list",
+      "nango_yandex_disk_get",
+      "nango_yandex_disk_files",
+      "nango_yandex_disk_last_uploaded",
+      "nango_yandex_disk_mkdir",
+      "nango_yandex_disk_upload_link",
+      "nango_yandex_disk_download_link",
+      "nango_yandex_disk_copy",
+      "nango_yandex_disk_move",
+      "nango_yandex_disk_delete",
+      "nango_yandex_disk_publish",
+      "nango_yandex_disk_unpublish",
+      "nango_yandex_disk_trash_list",
+      "nango_yandex_disk_trash_restore",
+      "nango_yandex_disk_trash_empty",
       "nango_yandex_mail_list",
       "nango_yandex_mail_get",
       "nango_yandex_mail_send",
-      "nango_yandex_calendar_call",
+      "nango_yandex_calendar_list_calendars",
+      "nango_yandex_calendar_list_events",
+      "nango_yandex_calendar_get_event",
+      "nango_yandex_calendar_create_event",
+      "nango_yandex_calendar_update_event",
+      "nango_yandex_calendar_delete_event",
       "nango_yandex_direct_call",
       "nango_yandex_maps_call",
       "nango_yandex_market_call",

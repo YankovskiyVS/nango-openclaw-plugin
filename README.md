@@ -14,9 +14,11 @@ npm run generate
 Each entry becomes tools in `contracts.tools` + enum in `config.providers[].type`.
 
 - Default `kind: proxy` → one tool `nango_<key>_call` via `/proxy/…`
-- `kind: mail` (e.g. `yandex-mail`) → tools from `tools:` list (`list`/`get`/`send`) via `/mail/…`
+- `kind: mail` → `list`/`get`/`send` via `/mail/…`
+- `kind: disk` → full Disk CRUD tools via Disk REST through `/proxy/yandex-disk/…`
+- `kind: calendar` → CalDAV CRUD via `/calendar/…`
 
-Connecting **yandex-mail** in the console enables all three mail tools at once (operator puts `yandex-mail` into `config.providers`).
+Connecting **yandex-disk** / **yandex-calendar** / **yandex-mail** enables all tools of that kind at once.
 
 Do **not** hand-edit `src/catalog.generated.ts` or `contracts.tools` in `openclaw.plugin.json`.
 
@@ -44,9 +46,10 @@ Bitrix/amo use tenant hosts (`https://{domain}/rest`, `https://{subdomain}.amocr
 
 ## Behaviour
 
-- `contracts.tools` = generated superset from YAML.
-- `register()` enables only providers in `plugins.entries.nango-proxy.config.providers`.
-- Changing that config hot-reloads tools (no Gateway restart).
+- Operator writes **full catalog** into `plugins.entries.nango-proxy.config.providers` with `enabled: false` and empty `connectionId`.
+- On connect: flip that entry to `enabled: true` + real `connectionId` (no add/remove of list members).
+- `register()` activates tools only for `enabled && connectionId`.
+- Config lives on a **local emptyDir** (not S3 PVC) so Gateway fsnotify/hot-reload sees the flip.
 - `before_tool_call` blocks calls when the connection is missing/unavailable.
 - `nango_list_connections` returns `upstreamBase` + `examples` for active connections.
 
