@@ -54,7 +54,7 @@ test("yandex-disk and yandex-calendar expose CRUD tools", () => {
   assert.equal(cal.kind, "calendar");
   assert.deepEqual(
     cal.tools.map((t) => t.action),
-    ["list_calendars", "list_events", "get_event", "create_event", "update_event", "delete_event"],
+    ["list_calendars", "create_calendar", "list_events", "get_event", "create_event", "update_event", "delete_event"],
   );
 });
 

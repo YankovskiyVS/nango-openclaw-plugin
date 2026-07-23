@@ -60,6 +60,7 @@ function buildCalendarUrl(
   evoclawId: string,
   action:
     | "list_calendars"
+    | "create_calendar"
     | "list_events"
     | "get_event"
     | "create_event"
@@ -71,6 +72,7 @@ function buildCalendarUrl(
   let path: string;
   switch (action) {
     case "list_calendars":
+    case "create_calendar":
       path = "calendar/calendars";
       break;
     case "list_events":
@@ -173,6 +175,7 @@ export async function calendarCall(input: {
   apiKey: string;
   action:
     | "list_calendars"
+    | "create_calendar"
     | "list_events"
     | "get_event"
     | "create_event"
@@ -190,7 +193,7 @@ export async function calendarCall(input: {
     input.query,
   );
   let method = "GET";
-  if (input.action === "create_event") method = "POST";
+  if (input.action === "create_event" || input.action === "create_calendar") method = "POST";
   else if (input.action === "update_event") method = "PUT";
   else if (input.action === "delete_event") method = "DELETE";
   return doFetch(url, method, input.apiKey, input.body, undefined, input.timeoutMs);

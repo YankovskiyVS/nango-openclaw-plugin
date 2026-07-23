@@ -26,6 +26,11 @@ function tryParseJSON(text: string): unknown {
   }
 }
 
+const calendarParamDescription =
+  "Calendar selector: omit for default (events-default / «Мои события»), " +
+  "or pass displayName exactly as in list_calendars, or the calendar href " +
+  "(e.g. /calendars/user@yandex.ru/events-default/). Do NOT invent path slugs from the title.";
+
 export function registerCalendarTools(
   api: OpenClawPluginApi,
   getRuntime: GetRuntime,
@@ -59,6 +64,42 @@ export function registerCalendarTools(
           },
         });
         break;
+      case "create_calendar":
+        registerOptionalTool(api, {
+          name: t.name,
+          description: desc,
+          parameters: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              displayName: {
+                type: "string",
+                description: "Human-readable calendar title, e.g. Рабочий",
+              },
+              id: {
+                type: "string",
+                description:
+                  "Optional ASCII collection id for the CalDAV URL (alphanumeric/dash). Auto-generated when omitted.",
+              },
+            },
+            required: ["displayName"],
+          },
+          async execute(_id: string, params: { displayName?: string; id?: string }) {
+            if (!params.displayName?.trim()) {
+              return toolResult({ error: "displayName is required" });
+            }
+            const res = await calendarCall({
+              ...base(),
+              action: "create_calendar",
+              body: {
+                displayName: params.displayName.trim(),
+                id: params.id?.trim() || undefined,
+              },
+            });
+            return toolResult({ status: res.status, body: tryParseJSON(res.bodyText) });
+          },
+        });
+        break;
       case "list_events":
         registerOptionalTool(api, {
           name: t.name,
@@ -67,10 +108,7 @@ export function registerCalendarTools(
             type: "object",
             additionalProperties: false,
             properties: {
-              calendar: {
-                type: "string",
-                description: "Calendar href or name (default events-default)",
-              },
+              calendar: { type: "string", description: calendarParamDescription },
               start: { type: "string", description: "Range start (RFC3339 or YYYY-MM-DD)" },
               end: { type: "string", description: "Range end (RFC3339 or YYYY-MM-DD)" },
             },
@@ -84,7 +122,7 @@ export function registerCalendarTools(
             if (params.start) q.set("start", params.start);
             if (params.end) q.set("end", params.end);
             const res = await calendarCall({
-              ...base,
+              ...base(),
               action: "list_events",
               query: q.toString(),
             });
@@ -105,7 +143,7 @@ export function registerCalendarTools(
           async execute(_id: string, params: { href?: string }) {
             if (!params.href) return toolResult({ error: "href is required" });
             const res = await calendarCall({
-              ...base,
+              ...base(),
               action: "get_event",
               query: `href=${encodeURIComponent(params.href)}`,
             });
@@ -126,7 +164,7 @@ export function registerCalendarTools(
               location: { type: "string" },
               start: { type: "string", description: "RFC3339 or YYYY-MM-DD" },
               end: { type: "string" },
-              calendar: { type: "string", description: "Default events-default" },
+              calendar: { type: "string", description: calendarParamDescription },
               uid: { type: "string", description: "Optional; auto-generated if omitted" },
             },
             required: ["summary", "start", "end"],
@@ -144,7 +182,7 @@ export function registerCalendarTools(
             },
           ) {
             const res = await calendarCall({
-              ...base,
+              ...base(),
               action: "create_event",
               body: params,
             });
@@ -166,13 +204,13 @@ export function registerCalendarTools(
               location: { type: "string" },
               start: { type: "string" },
               end: { type: "string" },
-              calendar: { type: "string" },
+              calendar: { type: "string", description: calendarParamDescription },
             },
             required: ["uid", "summary", "start", "end"],
           },
           async execute(_id: string, params: Record<string, unknown>) {
             const res = await calendarCall({
-              ...base,
+              ...base(),
               action: "update_event",
               body: params,
             });
@@ -193,7 +231,7 @@ export function registerCalendarTools(
           async execute(_id: string, params: { href?: string }) {
             if (!params.href) return toolResult({ error: "href is required" });
             const res = await calendarCall({
-              ...base,
+              ...base(),
               action: "delete_event",
               query: `href=${encodeURIComponent(params.href)}`,
             });

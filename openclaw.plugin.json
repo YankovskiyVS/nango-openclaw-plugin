@@ -100,6 +100,7 @@
       "nango_yandex_mail_get",
       "nango_yandex_mail_send",
       "nango_yandex_calendar_list_calendars",
+      "nango_yandex_calendar_create_calendar",
       "nango_yandex_calendar_list_events",
       "nango_yandex_calendar_get_event",
       "nango_yandex_calendar_create_event",
@@ -194,6 +195,9 @@
       "optional": true
     },
     "nango_yandex_calendar_list_calendars": {
+      "optional": true
+    },
+    "nango_yandex_calendar_create_calendar": {
       "optional": true
     },
     "nango_yandex_calendar_list_events": {

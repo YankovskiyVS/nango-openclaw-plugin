@@ -171,7 +171,7 @@ export function buildToolDescription(meta: ProviderMeta, displayName?: string, t
       \`\${label} (\${meta.key}) — \${actionHint}\`.trim(),
       meta.hint,
       "Uses ai-assistant-nango-proxy calendar API (CalDAV + OAuth). Tokens stay in Nango.",
-      "Routes: GET /calendar/calendars, GET|POST|PUT /calendar/events, GET|DELETE /calendar/event",
+      "Routes: GET|POST /calendar/calendars, GET|POST|PUT /calendar/events, GET|DELETE /calendar/event",
     ];
     if (meta.notes) lines.push(\`Note: \${meta.notes}\`);
     return lines.filter(Boolean).join(" ");
