@@ -10,4 +10,5 @@ export {
   toolNameForKey,
   type ProviderExample,
   type ProviderMeta,
+  type ProviderTool,
 } from "./catalog.generated.js";

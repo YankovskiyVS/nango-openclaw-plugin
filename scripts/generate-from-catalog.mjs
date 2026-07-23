@@ -25,13 +25,37 @@ function toolName(key) {
   return `nango_${String(key).replace(/-/g, "_")}_call`;
 }
 
+function mailToolName(key, action) {
+  return `nango_${String(key).replace(/-/g, "_")}_${action}`;
+}
+
 const catalog = providers.map((p) => {
   if (!p?.key) {
     throw new Error("provider entry missing key");
   }
+  const kind = p.kind ? String(p.kind) : "proxy";
+  const mailTools = Array.isArray(p.tools)
+    ? p.tools.map((t) => ({
+        name: String(t.name),
+        description: String(t.description || t.name),
+      }))
+    : [];
+
+  const tools =
+    kind === "mail"
+      ? mailTools.map((t) => ({
+          name: mailToolName(p.key, t.name),
+          action: t.name,
+          description: t.description,
+        }))
+      : [{ name: toolName(p.key), action: "call", description: "" }];
+
   return {
     key: String(p.key),
-    tool: toolName(p.key),
+    /** Primary tool (first) — kept for backwards compat maps. */
+    tool: tools[0]?.name || toolName(p.key),
+    tools,
+    kind,
     displayName: String(p.displayName || p.key),
     family: String(p.family || ""),
     hint: String(p.hint || ""),
@@ -51,7 +75,10 @@ const catalog = providers.map((p) => {
 });
 
 const keys = catalog.map((p) => p.key);
-const tools = [...catalog.map((p) => p.tool), "nango_list_connections"];
+const contractTools = [
+  ...catalog.flatMap((p) => p.tools.map((t) => t.name)),
+  "nango_list_connections",
+];
 
 const ts = `/* AUTO-GENERATED from catalog/providers.yaml — do not edit by hand.
  * Run: npm run generate
@@ -63,9 +90,19 @@ export type ProviderExample = {
   description?: string;
 };
 
+export type ProviderTool = {
+  name: string;
+  action: string;
+  description: string;
+};
+
 export type ProviderMeta = {
   key: string;
+  /** First tool name (compat). */
   tool: string;
+  tools: ProviderTool[];
+  /** "proxy" = generic REST via /proxy; "mail" = IMAP/SMTP via /mail/*. */
+  kind: "proxy" | "mail" | string;
   displayName: string;
   family: string;
   hint: string;
@@ -88,13 +125,13 @@ export const CATALOG_BY_KEY: ReadonlyMap<string, ProviderMeta> = new Map(
 );
 
 export const CATALOG_BY_TOOL: ReadonlyMap<string, ProviderMeta> = new Map(
-  CATALOG.map((p) => [p.tool, p]),
+  CATALOG.flatMap((p) => p.tools.map((t) => [t.name, p] as [string, ProviderMeta])),
 );
 
 export const LIST_CONNECTIONS_TOOL = "nango_list_connections";
 
 export function allContractTools(): string[] {
-  return ${JSON.stringify(tools)};
+  return ${JSON.stringify(contractTools)};
 }
 
 export function toolNameForKey(key: string): string {
@@ -102,8 +139,20 @@ export function toolNameForKey(key: string): string {
 }
 
 /** Human-readable tool description for the model (includes upstream + examples). */
-export function buildToolDescription(meta: ProviderMeta, displayName?: string): string {
+export function buildToolDescription(meta: ProviderMeta, displayName?: string, toolName?: string): string {
   const label = displayName || meta.displayName || meta.key;
+  if (meta.kind === "mail") {
+    const action = meta.tools.find((t) => t.name === toolName)?.action || "mail";
+    const actionHint = meta.tools.find((t) => t.name === toolName)?.description || "";
+    const lines = [
+      \`\${label} (\${meta.key}) — \${action}: \${actionHint}\`.trim(),
+      meta.hint,
+      "Uses ai-assistant-nango-proxy mail API (IMAP/SMTP XOAUTH2). Tokens stay in Nango.",
+      "Routes: GET /mail/list, GET /mail/get?uid=, POST /mail/send",
+    ];
+    if (meta.notes) lines.push(\`Note: \${meta.notes}\`);
+    return lines.filter(Boolean).join(" ");
+  }
   const lines = [
     \`Call \${label} (\${meta.key}) via ai-assistant-nango-proxy → Nango → provider API.\`,
     meta.hint,
@@ -135,7 +184,7 @@ const manifest = {
   name: "Nango Proxy Connector",
   description:
     "Tools OpenClaw for calling 3rd-party providers via ai-assistant-nango-proxy (self-hosted Nango). Catalog: catalog/providers.yaml",
-  version: "0.2.0",
+  version: "0.3.0",
   configSchema: {
     type: "object",
     additionalProperties: false,
@@ -168,7 +217,7 @@ const manifest = {
       },
     },
   },
-  contracts: { tools },
+  contracts: { tools: contractTools },
 };
 
 writeFileSync(
@@ -177,5 +226,5 @@ writeFileSync(
 );
 
 console.log(
-  `generated ${catalog.length} providers, ${tools.length} contract tools from catalog/providers.yaml`,
+  `generated ${catalog.length} providers, ${contractTools.length} contract tools from catalog/providers.yaml`,
 );

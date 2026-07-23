@@ -38,37 +38,51 @@ function buildUrl(
   return url;
 }
 
-export async function proxyCall(input: ProxyCallInput): Promise<ProxyCallResult> {
-  const url = buildUrl(
-    input.proxyBaseUrl,
-    input.projectId,
-    input.evoclawId,
-    input.providerConfigKey,
-    input.endpoint,
-    input.query,
-  );
+function buildMailUrl(
+  proxyBaseUrl: string,
+  projectId: string,
+  evoclawId: string,
+  action: "list" | "get" | "send",
+  query?: string,
+): string {
+  const base = proxyBaseUrl.replace(/\/$/, "");
+  let url = `${base}/api/v1/${projectId}/evo-claws/${evoclawId}/mail/${action}`;
+  if (query && query.trim()) {
+    const q = query.replace(/^\?/, "");
+    url += `?${q}`;
+  }
+  return url;
+}
 
+async function doFetch(
+  url: string,
+  method: string,
+  apiKey: string,
+  body?: unknown,
+  headersExtra?: Record<string, string>,
+  timeoutMs?: number,
+): Promise<ProxyCallResult> {
   const headers: Record<string, string> = {
-    Authorization: `Api-Key ${input.apiKey}`,
-    ...(input.headers ?? {}),
+    Authorization: `Api-Key ${apiKey}`,
+    ...(headersExtra ?? {}),
   };
 
-  let body: string | undefined;
-  if (input.body !== undefined && input.body !== null) {
-    if (typeof input.body === "string") {
-      body = input.body;
+  let bodyText: string | undefined;
+  if (body !== undefined && body !== null) {
+    if (typeof body === "string") {
+      bodyText = body;
     } else {
-      body = JSON.stringify(input.body);
+      bodyText = JSON.stringify(body);
       headers["Content-Type"] = headers["Content-Type"] ?? "application/json";
     }
   }
 
-  const method = (input.method || "GET").toUpperCase();
+  const m = (method || "GET").toUpperCase();
   const res = await fetch(url, {
-    method,
+    method: m,
     headers,
-    body: method === "GET" || method === "HEAD" ? undefined : body,
-    signal: AbortSignal.timeout(input.timeoutMs ?? 120_000),
+    body: m === "GET" || m === "HEAD" ? undefined : bodyText,
+    signal: AbortSignal.timeout(timeoutMs ?? 120_000),
   });
 
   const outHeaders: Record<string, string> = {};
@@ -83,6 +97,39 @@ export async function proxyCall(input: ProxyCallInput): Promise<ProxyCallResult>
   };
 }
 
+export async function proxyCall(input: ProxyCallInput): Promise<ProxyCallResult> {
+  const url = buildUrl(
+    input.proxyBaseUrl,
+    input.projectId,
+    input.evoclawId,
+    input.providerConfigKey,
+    input.endpoint,
+    input.query,
+  );
+  return doFetch(url, input.method, input.apiKey, input.body, input.headers, input.timeoutMs);
+}
+
+export async function mailCall(input: {
+  proxyBaseUrl: string;
+  projectId: string;
+  evoclawId: string;
+  apiKey: string;
+  action: "list" | "get" | "send";
+  query?: string;
+  body?: unknown;
+  timeoutMs?: number;
+}): Promise<ProxyCallResult> {
+  const url = buildMailUrl(
+    input.proxyBaseUrl,
+    input.projectId,
+    input.evoclawId,
+    input.action,
+    input.query,
+  );
+  const method = input.action === "send" ? "POST" : "GET";
+  return doFetch(url, method, input.apiKey, input.body, undefined, input.timeoutMs);
+}
+
 /** Cheap liveness probe: HEAD against provider root through the proxy. */
 export async function isConnectionAlive(input: {
   proxyBaseUrl: string;
@@ -92,13 +139,23 @@ export async function isConnectionAlive(input: {
   providerConfigKey: string;
 }): Promise<boolean> {
   try {
+    if (input.providerConfigKey === "yandex-mail") {
+      const res = await mailCall({
+        ...input,
+        action: "list",
+        query: "limit=1",
+        timeoutMs: 15_000,
+      });
+      if (res.status === 401 || res.status === 403) return false;
+      if (res.status === 404) return false;
+      return res.status < 500;
+    }
     const res = await proxyCall({
       ...input,
       method: "HEAD",
       endpoint: "/",
       timeoutMs: 5_000,
     });
-    // 404/401 from proxy = connection missing / auth; 2xx/4xx from upstream = alive.
     if (res.status === 401 || res.status === 403) return false;
     if (res.status === 404) {
       const lower = res.bodyText.toLowerCase();
@@ -110,4 +167,4 @@ export async function isConnectionAlive(input: {
   }
 }
 
-export { buildUrl };
+export { buildUrl, buildMailUrl };

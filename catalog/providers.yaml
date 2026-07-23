@@ -11,7 +11,6 @@ providers:
     family: yandex
     hint: Yandex profile, login, email, avatar
     upstreamBase: https://login.yandex.ru
-    aliases: [yandex]
     examples:
       - method: GET
         endpoint: info
@@ -36,14 +35,31 @@ providers:
   - key: yandex-mail
     displayName: Yandex Mail
     family: yandex
-    hint: Yandex Mail identity (IMAP/SMTP mail is not REST via proxy)
-    upstreamBase: https://login.yandex.ru
-    notes: Mailbox read/send is IMAP/SMTP + XOAUTH2, not Nango REST proxy.
+    kind: mail
+    hint: Read and send Yandex Mail via IMAP/SMTP XOAUTH2 (mail API on nango-proxy)
+    upstreamBase: "imap.yandex.com / smtp.yandex.com (via /mail/*)"
+    notes: >
+      Not REST. Connecting yandex-mail enables nango_yandex_mail_list|get|send.
+      Proxy routes: GET /mail/list, GET /mail/get?uid=, POST /mail/send.
+    tools:
+      - name: list
+        description: List recent messages in a mailbox (default INBOX)
+      - name: get
+        description: Get a message body by IMAP UID
+      - name: send
+        description: Send an email via SMTP XOAUTH2
     examples:
       - method: GET
-        endpoint: info
-        query: format=json
-        description: Mailbox identity via login.info
+        endpoint: mail/list
+        query: limit=20
+        description: List latest 20 messages
+      - method: GET
+        endpoint: mail/get
+        query: uid=123
+        description: Read message by UID
+      - method: POST
+        endpoint: mail/send
+        description: Send email (JSON body to/subject/body)
 
   - key: yandex-calendar
     displayName: Yandex Calendar

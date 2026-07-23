@@ -10,15 +10,38 @@ import {
 } from "./catalog.ts";
 
 test("catalog tools are unique and match naming convention", () => {
-  const tools = CATALOG.map((p) => p.tool);
+  const tools = CATALOG.flatMap((p) => p.tools.map((t) => t.name));
   assert.equal(new Set(tools).size, tools.length);
   for (const p of CATALOG) {
-    assert.equal(p.tool, `nango_${p.key.replace(/-/g, "_")}_call`);
-    assert.equal(CATALOG_BY_KEY.get(p.key)?.tool, p.tool);
-    assert.equal(CATALOG_BY_TOOL.get(p.tool)?.key, p.key);
     assert.ok(p.upstreamBase, `${p.key} must have upstreamBase`);
-    assert.ok(p.examples?.length, `${p.key} must have at least one example`);
+    assert.ok(p.tools?.length, `${p.key} must have tools`);
+    if (p.kind === "mail") {
+      for (const t of p.tools) {
+        assert.equal(t.name, `nango_${p.key.replace(/-/g, "_")}_${t.action}`);
+        assert.equal(CATALOG_BY_TOOL.get(t.name)?.key, p.key);
+      }
+    } else {
+      assert.equal(p.tool, `nango_${p.key.replace(/-/g, "_")}_call`);
+      assert.equal(CATALOG_BY_KEY.get(p.key)?.tool, p.tool);
+      assert.equal(CATALOG_BY_TOOL.get(p.tool)?.key, p.key);
+      assert.ok(p.examples?.length, `${p.key} must have at least one example`);
+    }
   }
+});
+
+test("yandex-mail exposes list/get/send tools", () => {
+  const meta = CATALOG_BY_KEY.get("yandex-mail");
+  assert.ok(meta);
+  assert.equal(meta.kind, "mail");
+  assert.deepEqual(
+    meta.tools.map((t) => t.action),
+    ["list", "get", "send"],
+  );
+  assert.ok(CATALOG_BY_TOOL.has("nango_yandex_mail_list"));
+  assert.ok(CATALOG_BY_TOOL.has("nango_yandex_mail_get"));
+  assert.ok(CATALOG_BY_TOOL.has("nango_yandex_mail_send"));
+  const desc = buildToolDescription(meta, undefined, "nango_yandex_mail_list");
+  assert.match(desc, /mail\/list/);
 });
 
 test("yandex alias resolves to yandex-id", () => {
@@ -34,8 +57,12 @@ test("tool description includes upstream and proxy shape", () => {
   assert.match(desc, /info/);
 });
 
-test("allContractTools includes list helper", () => {
+test("allContractTools includes list helper and mail tools", () => {
   const tools = allContractTools();
   assert.ok(tools.includes(LIST_CONNECTIONS_TOOL));
-  assert.equal(tools.length, CATALOG.length + 1);
+  assert.ok(tools.includes("nango_yandex_mail_list"));
+  assert.ok(!tools.includes("nango_yandex_mail_call"));
+  const expected =
+    CATALOG.reduce((n, p) => n + p.tools.length, 0) + 1;
+  assert.equal(tools.length, expected);
 });

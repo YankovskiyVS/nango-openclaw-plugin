@@ -8,9 +8,19 @@ export type ProviderExample = {
   description?: string;
 };
 
+export type ProviderTool = {
+  name: string;
+  action: string;
+  description: string;
+};
+
 export type ProviderMeta = {
   key: string;
+  /** First tool name (compat). */
   tool: string;
+  tools: ProviderTool[];
+  /** "proxy" = generic REST via /proxy; "mail" = IMAP/SMTP via /mail/*. */
+  kind: "proxy" | "mail" | string;
   displayName: string;
   family: string;
   hint: string;
@@ -26,6 +36,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "yandex-id",
     "tool": "nango_yandex_id_call",
+    "tools": [
+      {
+        "name": "nango_yandex_id_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Yandex ID",
     "family": "yandex",
     "hint": "Yandex profile, login, email, avatar",
@@ -45,6 +63,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "yandex-disk",
     "tool": "nango_yandex_disk_call",
+    "tools": [
+      {
+        "name": "nango_yandex_disk_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Yandex Disk",
     "family": "yandex",
     "hint": "Yandex Disk files and folders",
@@ -67,25 +93,62 @@ export const CATALOG: readonly ProviderMeta[] = [
   },
   {
     "key": "yandex-mail",
-    "tool": "nango_yandex_mail_call",
+    "tool": "nango_yandex_mail_list",
+    "tools": [
+      {
+        "name": "nango_yandex_mail_list",
+        "action": "list",
+        "description": "List recent messages in a mailbox (default INBOX)"
+      },
+      {
+        "name": "nango_yandex_mail_get",
+        "action": "get",
+        "description": "Get a message body by IMAP UID"
+      },
+      {
+        "name": "nango_yandex_mail_send",
+        "action": "send",
+        "description": "Send an email via SMTP XOAUTH2"
+      }
+    ],
+    "kind": "mail",
     "displayName": "Yandex Mail",
     "family": "yandex",
-    "hint": "Yandex Mail identity (IMAP/SMTP mail is not REST via proxy)",
-    "upstreamBase": "https://login.yandex.ru",
+    "hint": "Read and send Yandex Mail via IMAP/SMTP XOAUTH2 (mail API on nango-proxy)",
+    "upstreamBase": "imap.yandex.com / smtp.yandex.com (via /mail/*)",
     "aliases": [],
-    "notes": "Mailbox read/send is IMAP/SMTP + XOAUTH2, not Nango REST proxy.",
+    "notes": "Not REST. Connecting yandex-mail enables nango_yandex_mail_list|get|send. Proxy routes: GET /mail/list, GET /mail/get?uid=, POST /mail/send.\n",
     "examples": [
       {
         "method": "GET",
-        "endpoint": "info",
-        "query": "format=json",
-        "description": "Mailbox identity via login.info"
+        "endpoint": "mail/list",
+        "query": "limit=20",
+        "description": "List latest 20 messages"
+      },
+      {
+        "method": "GET",
+        "endpoint": "mail/get",
+        "query": "uid=123",
+        "description": "Read message by UID"
+      },
+      {
+        "method": "POST",
+        "endpoint": "mail/send",
+        "description": "Send email (JSON body to/subject/body)"
       }
     ]
   },
   {
     "key": "yandex-calendar",
     "tool": "nango_yandex_calendar_call",
+    "tools": [
+      {
+        "name": "nango_yandex_calendar_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Yandex Calendar",
     "family": "yandex",
     "hint": "Yandex Calendar events and calendars",
@@ -102,6 +165,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "yandex-direct",
     "tool": "nango_yandex_direct_call",
+    "tools": [
+      {
+        "name": "nango_yandex_direct_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Yandex Direct",
     "family": "yandex",
     "hint": "Yandex Direct campaigns, ads, reports",
@@ -118,6 +189,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "yandex-maps",
     "tool": "nango_yandex_maps_call",
+    "tools": [
+      {
+        "name": "nango_yandex_maps_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Yandex Maps",
     "family": "yandex",
     "hint": "Yandex Maps bookmarks / saved places",
@@ -134,6 +213,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "yandex-market",
     "tool": "nango_yandex_market_call",
+    "tools": [
+      {
+        "name": "nango_yandex_market_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Yandex Market Partner",
     "family": "yandex",
     "hint": "Yandex Market partner campaigns and offers",
@@ -150,6 +237,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "yandex-delivery",
     "tool": "nango_yandex_delivery_call",
+    "tools": [
+      {
+        "name": "nango_yandex_delivery_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Yandex Delivery Partner",
     "family": "yandex",
     "hint": "Yandex Delivery offers, claims, logistics",
@@ -166,6 +261,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24",
     "tool": "nango_bitrix24_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24",
     "family": "bitrix24",
     "hint": "Generic Bitrix24 REST",
@@ -182,6 +285,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24-crm",
     "tool": "nango_bitrix24_crm_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_crm_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24 CRM",
     "family": "bitrix24",
     "hint": "Bitrix24 leads, deals, contacts, companies",
@@ -203,6 +314,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24-tasks",
     "tool": "nango_bitrix24_tasks_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_tasks_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24 Tasks",
     "family": "bitrix24",
     "hint": "Bitrix24 tasks and projects",
@@ -219,6 +338,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24-disk",
     "tool": "nango_bitrix24_disk_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_disk_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24 Disk",
     "family": "bitrix24",
     "hint": "Bitrix24 Drive files and folders",
@@ -235,6 +362,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24-im",
     "tool": "nango_bitrix24_im_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_im_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24 Messenger",
     "family": "bitrix24",
     "hint": "Bitrix24 chats and open lines",
@@ -251,6 +386,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24-user",
     "tool": "nango_bitrix24_user_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_user_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24 Users",
     "family": "bitrix24",
     "hint": "Bitrix24 employees and departments",
@@ -272,6 +415,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24-calendar",
     "tool": "nango_bitrix24_calendar_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_calendar_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24 Calendar",
     "family": "bitrix24",
     "hint": "Bitrix24 calendar and rooms",
@@ -288,6 +439,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24-bizproc",
     "tool": "nango_bitrix24_bizproc_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_bizproc_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24 Bizproc",
     "family": "bitrix24",
     "hint": "Bitrix24 workflows and robots",
@@ -304,6 +463,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "bitrix24-telephony",
     "tool": "nango_bitrix24_telephony_call",
+    "tools": [
+      {
+        "name": "nango_bitrix24_telephony_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "Bitrix24 Telephony",
     "family": "bitrix24",
     "hint": "Bitrix24 calls and records",
@@ -320,6 +487,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "amocrm",
     "tool": "nango_amocrm_call",
+    "tools": [
+      {
+        "name": "nango_amocrm_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "amoCRM",
     "family": "amocrm",
     "hint": "Generic amoCRM REST",
@@ -336,6 +511,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "amocrm-crm",
     "tool": "nango_amocrm_crm_call",
+    "tools": [
+      {
+        "name": "nango_amocrm_crm_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "amoCRM CRM",
     "family": "amocrm",
     "hint": "amoCRM deals, contacts, pipelines",
@@ -357,6 +540,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "amocrm-catalog",
     "tool": "nango_amocrm_catalog_call",
+    "tools": [
+      {
+        "name": "nango_amocrm_catalog_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "amoCRM Catalog",
     "family": "amocrm",
     "hint": "amoCRM products and catalogs",
@@ -373,6 +564,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "amocrm-chats",
     "tool": "nango_amocrm_chats_call",
+    "tools": [
+      {
+        "name": "nango_amocrm_chats_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "amoCRM Chats",
     "family": "amocrm",
     "hint": "amoCRM messengers and channels",
@@ -389,6 +588,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "amocrm-telephony",
     "tool": "nango_amocrm_telephony_call",
+    "tools": [
+      {
+        "name": "nango_amocrm_telephony_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "amoCRM Telephony",
     "family": "amocrm",
     "hint": "amoCRM calls and records",
@@ -406,6 +613,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "amocrm-tasks",
     "tool": "nango_amocrm_tasks_call",
+    "tools": [
+      {
+        "name": "nango_amocrm_tasks_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "amoCRM Tasks",
     "family": "amocrm",
     "hint": "amoCRM tasks and reminders",
@@ -422,6 +637,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "amocrm-events",
     "tool": "nango_amocrm_events_call",
+    "tools": [
+      {
+        "name": "nango_amocrm_events_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "amoCRM Events",
     "family": "amocrm",
     "hint": "amoCRM activity history and notes",
@@ -438,6 +661,14 @@ export const CATALOG: readonly ProviderMeta[] = [
   {
     "key": "amocrm-users",
     "tool": "nango_amocrm_users_call",
+    "tools": [
+      {
+        "name": "nango_amocrm_users_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
     "displayName": "amoCRM Users",
     "family": "amocrm",
     "hint": "amoCRM managers and groups",
@@ -462,13 +693,13 @@ export const CATALOG_BY_KEY: ReadonlyMap<string, ProviderMeta> = new Map(
 );
 
 export const CATALOG_BY_TOOL: ReadonlyMap<string, ProviderMeta> = new Map(
-  CATALOG.map((p) => [p.tool, p]),
+  CATALOG.flatMap((p) => p.tools.map((t) => [t.name, p] as [string, ProviderMeta])),
 );
 
 export const LIST_CONNECTIONS_TOOL = "nango_list_connections";
 
 export function allContractTools(): string[] {
-  return ["nango_yandex_id_call","nango_yandex_disk_call","nango_yandex_mail_call","nango_yandex_calendar_call","nango_yandex_direct_call","nango_yandex_maps_call","nango_yandex_market_call","nango_yandex_delivery_call","nango_bitrix24_call","nango_bitrix24_crm_call","nango_bitrix24_tasks_call","nango_bitrix24_disk_call","nango_bitrix24_im_call","nango_bitrix24_user_call","nango_bitrix24_calendar_call","nango_bitrix24_bizproc_call","nango_bitrix24_telephony_call","nango_amocrm_call","nango_amocrm_crm_call","nango_amocrm_catalog_call","nango_amocrm_chats_call","nango_amocrm_telephony_call","nango_amocrm_tasks_call","nango_amocrm_events_call","nango_amocrm_users_call","nango_list_connections"];
+  return ["nango_yandex_id_call","nango_yandex_disk_call","nango_yandex_mail_list","nango_yandex_mail_get","nango_yandex_mail_send","nango_yandex_calendar_call","nango_yandex_direct_call","nango_yandex_maps_call","nango_yandex_market_call","nango_yandex_delivery_call","nango_bitrix24_call","nango_bitrix24_crm_call","nango_bitrix24_tasks_call","nango_bitrix24_disk_call","nango_bitrix24_im_call","nango_bitrix24_user_call","nango_bitrix24_calendar_call","nango_bitrix24_bizproc_call","nango_bitrix24_telephony_call","nango_amocrm_call","nango_amocrm_crm_call","nango_amocrm_catalog_call","nango_amocrm_chats_call","nango_amocrm_telephony_call","nango_amocrm_tasks_call","nango_amocrm_events_call","nango_amocrm_users_call","nango_list_connections"];
 }
 
 export function toolNameForKey(key: string): string {
@@ -476,8 +707,20 @@ export function toolNameForKey(key: string): string {
 }
 
 /** Human-readable tool description for the model (includes upstream + examples). */
-export function buildToolDescription(meta: ProviderMeta, displayName?: string): string {
+export function buildToolDescription(meta: ProviderMeta, displayName?: string, toolName?: string): string {
   const label = displayName || meta.displayName || meta.key;
+  if (meta.kind === "mail") {
+    const action = meta.tools.find((t) => t.name === toolName)?.action || "mail";
+    const actionHint = meta.tools.find((t) => t.name === toolName)?.description || "";
+    const lines = [
+      `${label} (${meta.key}) — ${action}: ${actionHint}`.trim(),
+      meta.hint,
+      "Uses ai-assistant-nango-proxy mail API (IMAP/SMTP XOAUTH2). Tokens stay in Nango.",
+      "Routes: GET /mail/list, GET /mail/get?uid=, POST /mail/send",
+    ];
+    if (meta.notes) lines.push(`Note: ${meta.notes}`);
+    return lines.filter(Boolean).join(" ");
+  }
   const lines = [
     `Call ${label} (${meta.key}) via ai-assistant-nango-proxy → Nango → provider API.`,
     meta.hint,

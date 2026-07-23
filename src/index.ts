@@ -1,7 +1,8 @@
 /**
  * nango-openclaw-plugin — OpenClaw tools for ai-assistant-nango-proxy.
  *
- * Registers one tool per active provider in plugins.entries.nango-proxy.config.providers.
+ * Registers tools for each active provider in plugins.entries.nango-proxy.config.providers.
+ * For kind=mail (yandex-mail): registers list/get/send against /mail/* API.
  * Hot-reload of that config re-runs register() without restarting the Gateway.
  */
 
@@ -19,10 +20,10 @@ import {
   providerKey,
   resolveRuntime,
 } from "./config.js";
-import { isConnectionAlive, proxyCall } from "./proxy.js";
+import { isConnectionAlive, mailCall, proxyCall } from "./proxy.js";
 
 const PLUGIN_ID = "nango-proxy";
-const PLUGIN_VERSION = "0.2.0";
+const PLUGIN_VERSION = "0.3.0";
 
 function callParameters(meta: ProviderMeta) {
   const example =
@@ -63,18 +64,27 @@ function toolResult(payload: unknown): {
   return { content: [{ type: "text", text }] };
 }
 
-function registerProviderTool(
+function tryParseJSON(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function registerProxyTool(
   api: OpenClawPluginApi,
   runtime: ReturnType<typeof resolveRuntime>,
   provider: ProviderConfig,
   meta: ProviderMeta,
-): void {
+): string[] {
   const key = providerKey(provider);
   const label = provider.displayName || meta.displayName || key;
+  const tool = meta.tools[0]?.name || meta.tool;
 
   api.registerTool({
-    name: meta.tool,
-    description: buildToolDescription(meta, label),
+    name: tool,
+    description: buildToolDescription(meta, label, tool),
     parameters: callParameters(meta),
     async execute(
       _id: string,
@@ -106,14 +116,168 @@ function registerProviderTool(
       });
     },
   });
+  return [tool];
 }
 
-function tryParseJSON(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
+function registerMailTools(
+  api: OpenClawPluginApi,
+  runtime: ReturnType<typeof resolveRuntime>,
+  provider: ProviderConfig,
+  meta: ProviderMeta,
+): string[] {
+  const label = provider.displayName || meta.displayName || meta.key;
+  const registered: string[] = [];
+
+  for (const t of meta.tools) {
+    const action = t.action as "list" | "get" | "send";
+    if (action === "list") {
+      api.registerTool({
+        name: t.name,
+        description: buildToolDescription(meta, label, t.name),
+        parameters: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            mailbox: {
+              type: "string",
+              description: "IMAP mailbox name (default INBOX)",
+              default: "INBOX",
+            },
+            limit: {
+              type: "number",
+              description: "Max messages to return (default 20, max 100)",
+              default: 20,
+            },
+          },
+        },
+        async execute(
+          _id: string,
+          params: { mailbox?: string; limit?: number },
+        ) {
+          const q = new URLSearchParams();
+          if (params.mailbox) q.set("mailbox", String(params.mailbox));
+          if (params.limit != null) q.set("limit", String(params.limit));
+          const res = await mailCall({
+            proxyBaseUrl: runtime.proxyBaseUrl,
+            projectId: runtime.projectId,
+            evoclawId: runtime.evoclawId,
+            apiKey: runtime.apiKey,
+            action: "list",
+            query: q.toString(),
+          });
+          return toolResult({
+            status: res.status,
+            body: tryParseJSON(res.bodyText),
+          });
+        },
+      });
+    } else if (action === "get") {
+      api.registerTool({
+        name: t.name,
+        description: buildToolDescription(meta, label, t.name),
+        parameters: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            uid: {
+              type: "number",
+              description: "IMAP UID of the message",
+            },
+            mailbox: {
+              type: "string",
+              description: "IMAP mailbox name (default INBOX)",
+              default: "INBOX",
+            },
+          },
+          required: ["uid"],
+        },
+        async execute(
+          _id: string,
+          params: { uid?: number; mailbox?: string },
+        ) {
+          if (params.uid == null) {
+            return toolResult({ error: "uid is required" });
+          }
+          const q = new URLSearchParams({ uid: String(params.uid) });
+          if (params.mailbox) q.set("mailbox", String(params.mailbox));
+          const res = await mailCall({
+            proxyBaseUrl: runtime.proxyBaseUrl,
+            projectId: runtime.projectId,
+            evoclawId: runtime.evoclawId,
+            apiKey: runtime.apiKey,
+            action: "get",
+            query: q.toString(),
+          });
+          return toolResult({
+            status: res.status,
+            body: tryParseJSON(res.bodyText),
+          });
+        },
+      });
+    } else if (action === "send") {
+      api.registerTool({
+        name: t.name,
+        description: buildToolDescription(meta, label, t.name),
+        parameters: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            to: {
+              type: "array",
+              items: { type: "string" },
+              description: "Recipient email addresses",
+            },
+            cc: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional CC addresses",
+            },
+            subject: { type: "string", description: "Email subject" },
+            body: { type: "string", description: "Plain-text body" },
+          },
+          required: ["to", "subject", "body"],
+        },
+        async execute(
+          _id: string,
+          params: {
+            to?: string[];
+            cc?: string[];
+            subject?: string;
+            body?: string;
+          },
+        ) {
+          if (!params.to?.length) {
+            return toolResult({ error: "to is required" });
+          }
+          if (!params.subject?.trim()) {
+            return toolResult({ error: "subject is required" });
+          }
+          const res = await mailCall({
+            proxyBaseUrl: runtime.proxyBaseUrl,
+            projectId: runtime.projectId,
+            evoclawId: runtime.evoclawId,
+            apiKey: runtime.apiKey,
+            action: "send",
+            body: {
+              to: params.to,
+              cc: params.cc,
+              subject: params.subject,
+              body: params.body ?? "",
+            },
+          });
+          return toolResult({
+            status: res.status,
+            body: tryParseJSON(res.bodyText),
+          });
+        },
+      });
+    } else {
+      api.logger.warn(`[nango-proxy] unknown mail action: ${action}`);
+      continue;
+    }
+    registered.push(t.name);
   }
+  return registered;
 }
 
 export default {
@@ -153,8 +317,11 @@ export default {
         api.logger.warn(`[nango-proxy] unknown provider type (not in catalog): ${key}`);
         continue;
       }
-      registerProviderTool(api, runtime, p, meta);
-      registered.push(meta.tool);
+      if (meta.kind === "mail") {
+        registered.push(...registerMailTools(api, runtime, p, meta));
+      } else {
+        registered.push(...registerProxyTool(api, runtime, p, meta));
+      }
     }
 
     api.registerTool({
@@ -175,7 +342,8 @@ export default {
               type: key,
               connectionId: p.connectionId,
               displayName: p.displayName || meta?.displayName || key,
-              tool: meta?.tool,
+              kind: meta?.kind ?? "proxy",
+              tools: meta?.tools?.map((t) => t.name) ?? (meta ? [meta.tool] : []),
               upstreamBase: meta?.upstreamBase,
               examples: meta?.examples,
               enabled: p.enabled !== false,

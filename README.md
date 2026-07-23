@@ -11,31 +11,34 @@ Source of truth: [`catalog/providers.yaml`](catalog/providers.yaml).
 npm run generate
 ```
 
-Each entry becomes:
+Each entry becomes tools in `contracts.tools` + enum in `config.providers[].type`.
 
-- a tool `nango_<key_with_underscores>_call`
-- an enum value in `config.providers[].type`
-- a rich tool description with **upstream base URL** and example endpoints (same info as `openclaw-nango-skill`)
+- Default `kind: proxy` → one tool `nango_<key>_call` via `/proxy/…`
+- `kind: mail` (e.g. `yandex-mail`) → tools from `tools:` list (`list`/`get`/`send`) via `/mail/…`
+
+Connecting **yandex-mail** in the console enables all three mail tools at once (operator puts `yandex-mail` into `config.providers`).
 
 Do **not** hand-edit `src/catalog.generated.ts` or `contracts.tools` in `openclaw.plugin.json`.
 
 ## How URLs work
 
-There is **one** proxy URL pattern for every provider:
+**REST providers** — one proxy pattern:
 
 ```text
 {NANGO_PROXY_URL}/api/v1/{projectId}/evo-claws/{evoclawId}/proxy/{provider_config_key}/{endpoint}
 ```
 
-Per-provider “base URL” is the **upstream** host that Nango resolves (e.g. `https://login.yandex.ru`). The agent only passes `{endpoint}` relative to that base — same as skills’ `Upstream base (via Nango)`.
+Per-provider “base URL” is the **upstream** host that Nango resolves (e.g. `https://login.yandex.ru`).
 
-Example for Yandex ID:
+**Yandex Mail** (`kind: mail`) — dedicated routes (IMAP/SMTP inside the proxy):
 
-| Layer | Value |
-| --- | --- |
-| Upstream base | `https://login.yandex.ru` |
-| Agent `endpoint` | `info` (+ `query=format=json`) |
-| Full proxy call | `…/proxy/yandex-id/info?format=json` |
+```text
+GET  …/mail/list?mailbox=INBOX&limit=20
+GET  …/mail/get?uid=123
+POST …/mail/send
+```
+
+Tools on connect: `nango_yandex_mail_list`, `nango_yandex_mail_get`, `nango_yandex_mail_send`.
 
 Bitrix/amo use tenant hosts (`https://{domain}/rest`, `https://{subdomain}.amocrm.ru`) — Nango fills the tenant from the connection.
 

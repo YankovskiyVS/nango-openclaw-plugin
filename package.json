@@ -1,6 +1,6 @@
 {
   "name": "nango-openclaw-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OpenClaw tools for calling 3rd-party providers via ai-assistant-nango-proxy",
   "type": "module",
   "openclaw": {
