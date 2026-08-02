@@ -69,6 +69,13 @@
       "nango_amocrm_tasks_call",
       "nango_amocrm_events_call",
       "nango_amocrm_users_call",
+      "nango_github_call",
+      "nango_github_repos_call",
+      "nango_github_issues_call",
+      "nango_github_pulls_call",
+      "nango_github_actions_call",
+      "nango_github_gists_call",
+      "nango_github_orgs_call",
       "nango_list_connections"
     ]
   }

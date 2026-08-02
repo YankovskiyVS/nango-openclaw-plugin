@@ -816,6 +816,302 @@ export const CATALOG: readonly ProviderMeta[] = [
         "description": "List users"
       }
     ]
+  },
+  {
+    "key": "github",
+    "tool": "nango_github_call",
+    "tools": [
+      {
+        "name": "nango_github_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
+    "displayName": "GitHub",
+    "family": "github",
+    "hint": "GitHub profile and generic REST (api.github.com)",
+    "upstreamBase": "https://api.github.com",
+    "aliases": [
+      "gh"
+    ],
+    "docs": "https://docs.github.com/en/rest",
+    "notes": "Classic User OAuth. Connecting github enables nango_github_call. Prefer domain tools (github-repos / github-issues / github-pulls / …) when the task matches. Endpoints are relative to https://api.github.com (e.g. user, user/repos).\n",
+    "examples": [
+      {
+        "method": "GET",
+        "endpoint": "user",
+        "description": "Authenticated user profile"
+      },
+      {
+        "method": "GET",
+        "endpoint": "user/emails",
+        "description": "User email addresses"
+      }
+    ]
+  },
+  {
+    "key": "github-repos",
+    "tool": "nango_github_repos_call",
+    "tools": [
+      {
+        "name": "nango_github_repos_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
+    "displayName": "GitHub Repositories",
+    "family": "github",
+    "hint": "List/create/update repos, contents, branches, commits",
+    "upstreamBase": "https://api.github.com",
+    "aliases": [],
+    "docs": "https://docs.github.com/en/rest/repos",
+    "examples": [
+      {
+        "method": "GET",
+        "endpoint": "user/repos",
+        "query": "per_page=30&sort=updated",
+        "description": "List authenticated user repositories"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}",
+        "description": "Get a repository"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/contents/{path}",
+        "description": "Get file or directory contents"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/branches",
+        "description": "List branches"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/commits",
+        "query": "per_page=20",
+        "description": "List commits"
+      },
+      {
+        "method": "POST",
+        "endpoint": "user/repos",
+        "description": "Create a repository (JSON body name, private, …)"
+      }
+    ]
+  },
+  {
+    "key": "github-issues",
+    "tool": "nango_github_issues_call",
+    "tools": [
+      {
+        "name": "nango_github_issues_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
+    "displayName": "GitHub Issues",
+    "family": "github",
+    "hint": "Issues, comments, labels, milestones",
+    "upstreamBase": "https://api.github.com",
+    "aliases": [],
+    "docs": "https://docs.github.com/en/rest/issues",
+    "examples": [
+      {
+        "method": "GET",
+        "endpoint": "issues",
+        "query": "filter=assigned&state=open&per_page=30",
+        "description": "Issues assigned to the authenticated user"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/issues",
+        "query": "state=open&per_page=30",
+        "description": "List repository issues"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/issues/{issue_number}",
+        "description": "Get an issue"
+      },
+      {
+        "method": "POST",
+        "endpoint": "repos/{owner}/{repo}/issues",
+        "description": "Create an issue (JSON body title, body, labels, …)"
+      },
+      {
+        "method": "POST",
+        "endpoint": "repos/{owner}/{repo}/issues/{issue_number}/comments",
+        "description": "Comment on an issue (JSON body body)"
+      }
+    ]
+  },
+  {
+    "key": "github-pulls",
+    "tool": "nango_github_pulls_call",
+    "tools": [
+      {
+        "name": "nango_github_pulls_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
+    "displayName": "GitHub Pull Requests",
+    "family": "github",
+    "hint": "Pull requests, reviews, files, merge",
+    "upstreamBase": "https://api.github.com",
+    "aliases": [],
+    "docs": "https://docs.github.com/en/rest/pulls",
+    "examples": [
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/pulls",
+        "query": "state=open&per_page=30",
+        "description": "List pull requests"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/pulls/{pull_number}",
+        "description": "Get a pull request"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/pulls/{pull_number}/files",
+        "description": "Files changed in a PR"
+      },
+      {
+        "method": "POST",
+        "endpoint": "repos/{owner}/{repo}/pulls",
+        "description": "Create a PR (JSON body title, head, base, body)"
+      },
+      {
+        "method": "PUT",
+        "endpoint": "repos/{owner}/{repo}/pulls/{pull_number}/merge",
+        "description": "Merge a pull request"
+      }
+    ]
+  },
+  {
+    "key": "github-actions",
+    "tool": "nango_github_actions_call",
+    "tools": [
+      {
+        "name": "nango_github_actions_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
+    "displayName": "GitHub Actions",
+    "family": "github",
+    "hint": "Workflows, runs, jobs, artifacts",
+    "upstreamBase": "https://api.github.com",
+    "aliases": [],
+    "docs": "https://docs.github.com/en/rest/actions",
+    "examples": [
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/actions/workflows",
+        "description": "List workflows"
+      },
+      {
+        "method": "GET",
+        "endpoint": "repos/{owner}/{repo}/actions/runs",
+        "query": "per_page=20",
+        "description": "List workflow runs"
+      },
+      {
+        "method": "POST",
+        "endpoint": "repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches",
+        "description": "Trigger a workflow_dispatch (JSON body ref, inputs)"
+      },
+      {
+        "method": "POST",
+        "endpoint": "repos/{owner}/{repo}/actions/runs/{run_id}/rerun",
+        "description": "Re-run a workflow run"
+      }
+    ]
+  },
+  {
+    "key": "github-gists",
+    "tool": "nango_github_gists_call",
+    "tools": [
+      {
+        "name": "nango_github_gists_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
+    "displayName": "GitHub Gists",
+    "family": "github",
+    "hint": "Gists CRUD",
+    "upstreamBase": "https://api.github.com",
+    "aliases": [],
+    "docs": "https://docs.github.com/en/rest/gists",
+    "examples": [
+      {
+        "method": "GET",
+        "endpoint": "gists",
+        "query": "per_page=30",
+        "description": "List authenticated user gists"
+      },
+      {
+        "method": "GET",
+        "endpoint": "gists/{gist_id}",
+        "description": "Get a gist"
+      },
+      {
+        "method": "POST",
+        "endpoint": "gists",
+        "description": "Create a gist (JSON body files, description, public)"
+      }
+    ]
+  },
+  {
+    "key": "github-orgs",
+    "tool": "nango_github_orgs_call",
+    "tools": [
+      {
+        "name": "nango_github_orgs_call",
+        "action": "call",
+        "description": ""
+      }
+    ],
+    "kind": "proxy",
+    "displayName": "GitHub Organizations",
+    "family": "github",
+    "hint": "Orgs, members, teams",
+    "upstreamBase": "https://api.github.com",
+    "aliases": [],
+    "docs": "https://docs.github.com/en/rest/orgs",
+    "examples": [
+      {
+        "method": "GET",
+        "endpoint": "user/orgs",
+        "description": "List orgs for the authenticated user"
+      },
+      {
+        "method": "GET",
+        "endpoint": "orgs/{org}",
+        "description": "Get an organization"
+      },
+      {
+        "method": "GET",
+        "endpoint": "orgs/{org}/repos",
+        "query": "per_page=30",
+        "description": "List organization repositories"
+      },
+      {
+        "method": "GET",
+        "endpoint": "orgs/{org}/members",
+        "description": "List organization members"
+      }
+    ]
   }
 ] as const;
 
@@ -834,7 +1130,7 @@ export const CATALOG_BY_TOOL: ReadonlyMap<string, ProviderMeta> = new Map(
 export const LIST_CONNECTIONS_TOOL = "nango_list_connections";
 
 export function allContractTools(): string[] {
-  return ["nango_yandex_id_call","nango_yandex_disk_info","nango_yandex_disk_list","nango_yandex_disk_get","nango_yandex_disk_files","nango_yandex_disk_last_uploaded","nango_yandex_disk_mkdir","nango_yandex_disk_upload","nango_yandex_disk_upload_link","nango_yandex_disk_download_link","nango_yandex_disk_copy","nango_yandex_disk_move","nango_yandex_disk_delete","nango_yandex_disk_publish","nango_yandex_disk_unpublish","nango_yandex_disk_trash_list","nango_yandex_disk_trash_restore","nango_yandex_disk_trash_empty","nango_yandex_mail_list","nango_yandex_mail_get","nango_yandex_mail_send","nango_yandex_calendar_list_calendars","nango_yandex_calendar_create_calendar","nango_yandex_calendar_list_events","nango_yandex_calendar_get_event","nango_yandex_calendar_create_event","nango_yandex_calendar_update_event","nango_yandex_calendar_delete_event","nango_yandex_direct_call","nango_yandex_maps_call","nango_yandex_market_call","nango_yandex_delivery_call","nango_bitrix24_call","nango_bitrix24_crm_call","nango_bitrix24_tasks_call","nango_bitrix24_disk_call","nango_bitrix24_im_call","nango_bitrix24_user_call","nango_bitrix24_calendar_call","nango_bitrix24_bizproc_call","nango_bitrix24_telephony_call","nango_amocrm_call","nango_amocrm_crm_call","nango_amocrm_catalog_call","nango_amocrm_chats_call","nango_amocrm_telephony_call","nango_amocrm_tasks_call","nango_amocrm_events_call","nango_amocrm_users_call","nango_list_connections"];
+  return ["nango_yandex_id_call","nango_yandex_disk_info","nango_yandex_disk_list","nango_yandex_disk_get","nango_yandex_disk_files","nango_yandex_disk_last_uploaded","nango_yandex_disk_mkdir","nango_yandex_disk_upload","nango_yandex_disk_upload_link","nango_yandex_disk_download_link","nango_yandex_disk_copy","nango_yandex_disk_move","nango_yandex_disk_delete","nango_yandex_disk_publish","nango_yandex_disk_unpublish","nango_yandex_disk_trash_list","nango_yandex_disk_trash_restore","nango_yandex_disk_trash_empty","nango_yandex_mail_list","nango_yandex_mail_get","nango_yandex_mail_send","nango_yandex_calendar_list_calendars","nango_yandex_calendar_create_calendar","nango_yandex_calendar_list_events","nango_yandex_calendar_get_event","nango_yandex_calendar_create_event","nango_yandex_calendar_update_event","nango_yandex_calendar_delete_event","nango_yandex_direct_call","nango_yandex_maps_call","nango_yandex_market_call","nango_yandex_delivery_call","nango_bitrix24_call","nango_bitrix24_crm_call","nango_bitrix24_tasks_call","nango_bitrix24_disk_call","nango_bitrix24_im_call","nango_bitrix24_user_call","nango_bitrix24_calendar_call","nango_bitrix24_bizproc_call","nango_bitrix24_telephony_call","nango_amocrm_call","nango_amocrm_crm_call","nango_amocrm_catalog_call","nango_amocrm_chats_call","nango_amocrm_telephony_call","nango_amocrm_tasks_call","nango_amocrm_events_call","nango_amocrm_users_call","nango_github_call","nango_github_repos_call","nango_github_issues_call","nango_github_pulls_call","nango_github_actions_call","nango_github_gists_call","nango_github_orgs_call","nango_list_connections"];
 }
 
 export function toolNameForKey(key: string): string {
